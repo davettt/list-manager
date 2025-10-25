@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            name="description"
+            content="Privacy-first list manager. Create any type of list with optional AI suggestions. All data stays local."
+        />
+        <title>List Manager</title>
+
+        <!-- Styles -->
+        <link rel="stylesheet" href="styles/themes.css" />
+        <link rel="stylesheet" href="styles/main.css" />
+        <link rel="stylesheet" href="styles/components.css" />
+    </head>
+    <body data-theme="light">
+        <!-- Main Header -->
+        <header class="app-header">
+            <div class="container">
+                <h1 class="app-title">List Manager</h1>
+                <button id="settings-btn" class="icon-btn" aria-label="Settings">
+                    <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                        ></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Search and Filters -->
+                <div class="search-filters">
+                    <div class="search-bar">
+                        <input
+                            type="text"
+                            id="search-input"
+                            placeholder="Search lists and items..."
+                            aria-label="Search"
+                        />
+                        <svg
+                            class="search-icon"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                    </div>
+
+                    <div class="filters">
+                        <select id="category-filter" aria-label="Filter by category">
+                            <option value="">All Categories</option>
+                        </select>
+
+                        <select id="tag-filter" aria-label="Filter by tag">
+                            <option value="">All Tags</option>
+                        </select>
+
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="favorites-filter" />
+                            <span>Favorites Only</span>
+                        </label>
+
+                        <button id="view-toggle" class="icon-btn" aria-label="Toggle view">
+                            <svg
+                                id="grid-icon"
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <rect x="3" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="14" width="7" height="7"></rect>
+                                <rect x="3" y="14" width="7" height="7"></rect>
+                            </svg>
+                            <svg
+                                id="list-icon"
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                style="display: none"
+                            >
+                                <line x1="8" y1="6" x2="21" y2="6"></line>
+                                <line x1="8" y1="12" x2="21" y2="12"></line>
+                                <line x1="8" y1="18" x2="21" y2="18"></line>
+                                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lists Container -->
+                <div id="lists-container" class="lists-grid">
+                    <!-- Lists will be rendered here -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="empty-state" style="display: none">
+                    <svg
+                        width="64"
+                        height="64"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                    >
+                        <path
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                        ></path>
+                    </svg>
+                    <h2>No Lists Yet</h2>
+                    <p>Create your first list to get started</p>
+                    <button id="empty-new-list-btn" class="btn btn-primary">Create List</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer Actions -->
+        <footer class="app-footer">
+            <div class="container footer-actions">
+                <button id="new-list-btn" class="btn btn-primary">
+                    <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    New List
+                </button>
+                <button id="import-btn" class="btn btn-secondary">Import</button>
+                <button id="export-btn" class="btn btn-secondary">Export All</button>
+            </div>
+        </footer>
+
+        <!-- List Detail Modal -->
+        <div
+            id="list-modal"
+            class="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+        >
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button id="modal-back-btn" class="icon-btn" aria-label="Back">
+                        <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                    </button>
+                    <h2 id="modal-title">List Details</h2>
+                    <button id="modal-favorite-btn" class="icon-btn" aria-label="Toggle favorite">
+                        <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                            ></polygon>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- List Metadata -->
+                    <div class="list-metadata">
+                        <input
+                            type="text"
+                            id="list-name-input"
+                            class="input-large"
+                            placeholder="List name"
+                            aria-label="List name"
+                        />
+
+                        <div class="metadata-row">
+                            <select id="list-category-input" aria-label="Category">
+                                <option value="">No Category</option>
+                                <option value="personal">Personal</option>
+                                <option value="work">Work</option>
+                                <option value="travel">Travel</option>
+                                <option value="shopping">Shopping</option>
+                                <option value="projects">Projects</option>
+                                <option value="food">Food</option>
+                                <option value="health">Health</option>
+                                <option value="other">Other</option>
+                            </select>
+
+                            <select id="list-priority-input" aria-label="Priority">
+                                <option value="none">No Priority</option>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+
+                        <input
+                            type="text"
+                            id="list-tags-input"
+                            placeholder="Tags (comma-separated)"
+                            aria-label="Tags"
+                        />
+                        <input type="date" id="list-deadline-input" aria-label="Deadline" />
+                    </div>
+
+                    <!-- Items List -->
+                    <div class="items-section">
+                        <h3>Items</h3>
+                        <ul id="items-list" class="items-list">
+                            <!-- Items will be rendered here -->
+                        </ul>
+
+                        <!-- Add Item -->
+                        <div class="add-item">
+                            <input
+                                type="text"
+                                id="new-item-input"
+                                placeholder="Add an item..."
+                                aria-label="New item"
+                            />
+                            <button id="add-item-btn" class="btn btn-primary">Add</button>
+                            <button
+                                id="ai-suggest-btn"
+                                class="btn btn-secondary"
+                                style="display: none"
+                            >
+                                <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <polygon
+                                        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                                    ></polygon>
+                                </svg>
+                                AI Suggest
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Modal Actions -->
+                    <div class="modal-actions">
+                        <button id="edit-list-btn" class="btn btn-secondary">Save Changes</button>
+                        <button id="delete-list-btn" class="btn btn-danger">Delete List</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div
+            id="settings-modal"
+            class="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settings-title"
+        >
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="settings-title">Settings</h2>
+                    <button id="settings-close-btn" class="icon-btn" aria-label="Close">
+                        <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- AI Settings -->
+                    <section class="settings-section">
+                        <h3>Claude AI Integration</h3>
+                        <p class="help-text">
+                            Optional: Add your own Claude API key for AI suggestions
+                        </p>
+                        <input
+                            type="password"
+                            id="api-key-input"
+                            placeholder="sk-ant-..."
+                            aria-label="API key"
+                        />
+                        <div class="settings-actions">
+                            <button id="test-api-btn" class="btn btn-secondary">
+                                Test Connection
+                            </button>
+                            <a
+                                href="https://console.anthropic.com/settings/keys"
+                                target="_blank"
+                                class="link"
+                                >Get API Key</a
+                            >
+                        </div>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="ai-enabled-checkbox" />
+                            <span>Enable AI features</span>
+                        </label>
+                    </section>
+
+                    <!-- Display Settings -->
+                    <section class="settings-section">
+                        <h3>Display</h3>
+                        <div class="settings-group">
+                            <label for="theme-select">Theme</label>
+                            <select id="theme-select">
+                                <option value="light">Light</option>
+                                <option value="dark">Dark</option>
+                                <option value="auto">Auto (System)</option>
+                            </select>
+                        </div>
+                    </section>
+
+                    <!-- Data Management -->
+                    <section class="settings-section">
+                        <h3>Data Management</h3>
+                        <div class="settings-actions">
+                            <button id="export-all-btn" class="btn btn-secondary">
+                                Export All Data
+                            </button>
+                            <button id="import-data-btn" class="btn btn-secondary">
+                                Import Data
+                            </button>
+                            <button id="clear-all-btn" class="btn btn-danger">
+                                Clear All Data
+                            </button>
+                        </div>
+                    </section>
+
+                    <!-- About -->
+                    <section class="settings-section">
+                        <h3>About</h3>
+                        <p>List Manager v1.0.0</p>
+                        <p class="help-text">
+                            Privacy-first list management. All data stays local in your browser.
+                        </p>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Suggestions Panel -->
+        <div id="ai-panel" class="ai-panel" role="complementary" aria-label="AI suggestions">
+            <div class="ai-panel-header">
+                <h3>AI Suggestions</h3>
+                <button id="ai-panel-close" class="icon-btn" aria-label="Close">
+                    <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="ai-panel-body">
+                <ul id="suggestions-list" class="suggestions-list">
+                    <!-- Suggestions will be rendered here -->
+                </ul>
+            </div>
+            <div class="ai-panel-footer">
+                <button id="add-selected-btn" class="btn btn-primary">Add Selected</button>
+                <button id="add-all-btn" class="btn btn-secondary">Add All</button>
+                <button id="generate-more-btn" class="btn btn-secondary">Generate More</button>
+            </div>
+        </div>
+
+        <!-- Toast Container -->
+        <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+        <!-- Hidden File Input for Import -->
+        <input type="file" id="file-input" accept=".json" style="display: none" />
+
+        <!-- Scripts - Load in order: utils, storage, ui-helpers, claude-api, then app -->
+        <script src="js/utils.js"></script>
+        <script src="js/storage.js"></script>
+        <script src="js/ui-helpers.js"></script>
+        <script src="js/claude-api.js"></script>
+        <script src="js/app.js"></script>
+    </body>
+</html>

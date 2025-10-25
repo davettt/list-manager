@@ -1,0 +1,214 @@
+{
+  "version": "1.0.0",
+  "exportDate": "2025-01-15T00:00:00.000Z",
+  "lists": [
+    {
+      "id": "sample-1",
+      "name": "Japan Trip 2025",
+      "category": "travel",
+      "tags": ["asia", "planning", "vacation"],
+      "priority": "high",
+      "deadline": "2025-03-01",
+      "favorite": true,
+      "items": [
+        {
+          "id": "item-1-1",
+          "text": "Book flights to Tokyo",
+          "completed": true,
+          "notes": "",
+          "addedDate": "2025-01-10T10:00:00.000Z",
+          "source": "user"
+        },
+        {
+          "id": "item-1-2",
+          "text": "Reserve hotel in Shibuya",
+          "completed": false,
+          "notes": "",
+          "addedDate": "2025-01-10T10:05:00.000Z",
+          "source": "user"
+        },
+        {
+          "id": "item-1-3",
+          "text": "Apply for JR Rail Pass",
+          "completed": false,
+          "notes": "",
+          "addedDate": "2025-01-10T10:10:00.000Z",
+          "source": "user"
+        },
+        {
+          "id": "item-1-4",
+          "text": "Plan day trip to Mount Fuji",
+          "completed": false,
+          "notes": "",
+          "addedDate": "2025-01-10T10:15:00.000Z",
+          "source": "user"
+        },
+        {
+          "id": "item-1-5",
+          "text": "Research best ramen shops in Tokyo",
+          "completed": false,
+          "notes": "",
+          "addedDate": "2025-01-10T10:20:00.000Z",
+          "source": "user"
+        }
+      ],
+      "metadata": {
+        "created": "2025-01-10T10:00:00.000Z",
+        "modified": "2025-01-10T10:20:00.000Z",
+        "itemCount": 5,
+        "completedCount": 1
+      }
+    },
+    {
+      "id": "sample-2",
+      "name": "Weekly Groceries",
+      "category": "shopping",
+      "tags": ["food", "weekly", "essentials"],
+      "priority": "medium",
+      "deadline": null,
+      "favorite": false,
+      "items": [
+        {
+          "id": "item-2-1",
+          "text": "Milk",
+          "completed": false,
+          "notes": "",
+          "addedDate": "2025-01-12T08:00:00.000Z",
+          "source": "user"
+        },
+        {
+          "id": "item-2-2",
+          "text": "Eggs (dozen)",
+          "completed": false,
+          "notes": "",
+          "addedDate": "2025-01-12T08:01:00.000Z",
+          "source": "user"
+        },
+        {
+          "id": "item-2-3",
+          "text": "Bread",
+          "completed": false,
+          "notes": "",
+          "addedDate": "2025-01-12T08:02:00.000Z",
+          "source": "user"
+        },
+        {
+          "id": "item-2-4",
+          "text": "Chicken breast",
+          "completed": false,
+          "notes": "",
+          "addedDate": "2025-01-12T08:03:00.000Z",
+          "source": "user"
+        },
+        {
+          "id": "item-2-5",
+          "text": "Fresh vegetables (spinach, carrots, broccoli)",
+          "completed": false,
+          "notes": "",
+          "addedDate": "2025-01-12T08:04:00.000Z",
+          "source": "user"
+        },
+        {
+          "id": "item-2-6",
+          "text": "Pasta",
+          "completed": false,
+          "notes": "",
+          "addedDate": "2025-01-12T08:05:00.000Z",
+          "source": "user"
+        },
+        {
+          "id": "item-2-7",
+          "text": "Olive oil",
+          "completed": false,
+          "notes": "",
+          "addedDate": "2025-01-12T08:06:00.000Z",
+          "source": "user"
+        }
+      ],
+      "metadata": {
+        "created": "2025-01-12T08:00:00.000Z",
+        "modified": "2025-01-12T08:06:00.000Z",
+        "itemCount": 7,
+        "completedCount": 0
+      }
+    },
+    {
+      "id": "sample-3",
+      "name": "Learn Web Development",
+      "category": "projects",
+      "tags": ["coding", "learning", "career"],
+      "priority": "high",
+      "deadline": null,
+      "favorite": true,
+      "items": [
+        {
+          "id": "item-3-1",
+          "text": "Complete HTML & CSS basics course",
+          "completed": true,
+          "notes": "",
+          "addedDate": "2025-01-05T09:00:00.000Z",
+          "source": "user"
+        },
+        {
+          "id": "item-3-2",
+          "text": "Learn JavaScript fundamentals",
+          "completed": true,
+          "notes": "",
+          "addedDate": "2025-01-05T09:05:00.000Z",
+          "source": "user"
+        },
+        {
+          "id": "item-3-3",
+          "text": "Build a personal portfolio website",
+          "completed": false,
+          "notes": "",
+          "addedDate": "2025-01-05T09:10:00.000Z",
+          "source": "user"
+        },
+        {
+          "id": "item-3-4",
+          "text": "Study React framework",
+          "completed": false,
+          "notes": "",
+          "addedDate": "2025-01-05T09:15:00.000Z",
+          "source": "user"
+        },
+        {
+          "id": "item-3-5",
+          "text": "Practice with coding challenges on LeetCode",
+          "completed": false,
+          "notes": "",
+          "addedDate": "2025-01-05T09:20:00.000Z",
+          "source": "user"
+        },
+        {
+          "id": "item-3-6",
+          "text": "Build 3 small projects for portfolio",
+          "completed": false,
+          "notes": "",
+          "addedDate": "2025-01-05T09:25:00.000Z",
+          "source": "user"
+        }
+      ],
+      "metadata": {
+        "created": "2025-01-05T09:00:00.000Z",
+        "modified": "2025-01-05T09:25:00.000Z",
+        "itemCount": 6,
+        "completedCount": 2
+      }
+    }
+  ],
+  "settings": {
+    "apiKey": "",
+    "display": {
+      "view": "grid",
+      "theme": "light",
+      "itemsPerPage": 20
+    },
+    "ai": {
+      "enabled": false,
+      "autoSuggest": false
+    },
+    "version": "1.0.0"
+  }
+}

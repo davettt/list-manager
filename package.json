@@ -1,0 +1,39 @@
+{
+    "name": "list-manager",
+    "version": "1.1.0",
+    "description": "Privacy-first list manager with optional AI suggestions",
+    "type": "module",
+    "scripts": {
+        "dev": "node server.js",
+        "lint": "eslint js/ --max-warnings 0",
+        "lint:fix": "eslint js/ --fix",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "security:audit": "npm audit --production",
+        "validate": "npm run lint && npm run format:check && npm run security:audit",
+        "precommit": "npm run validate"
+    },
+    "keywords": [
+        "list-manager",
+        "todo",
+        "privacy",
+        "local",
+        "ai",
+        "claude"
+    ],
+    "author": "David Tiong",
+    "license": "MIT",
+    "dependencies": {
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
+        "express": "^4.21.1"
+    },
+    "devDependencies": {
+        "eslint": "^8.57.1",
+        "prettier": "^3.4.2"
+    },
+    "engines": {
+        "node": ">=18.0.0",
+        "npm": ">=9.0.0"
+    }
+}

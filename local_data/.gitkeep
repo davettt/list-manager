@@ -1,0 +1,2 @@
+# This file ensures the local_data/ directory is tracked by git
+# User data files (*.json, .env.local) are gitignored

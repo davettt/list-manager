@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Logs
+*.log
+
+# Package manager files
+package-lock.json
+yarn.lock
+
+# Assets and sample data
+assets/
+
+# Documentation (already formatted)
+*.md
+
+# Claude directory
+.claude/
