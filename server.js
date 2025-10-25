@@ -17,14 +17,47 @@ import { existsSync } from 'fs';
 import dotenv from 'dotenv';
 
 // Load environment variables from local_data/.env.local (user's keys)
-dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), 'local_data', '.env.local') });
+dotenv.config({
+    path: path.join(path.dirname(fileURLToPath(import.meta.url)), 'local_data', '.env.local')
+});
 
 // ES modules __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const DEFAULT_PORT = process.env.PORT || 3000;
+
+/**
+ * Check if a port is available
+ * @param {number} port - Port to check
+ * @returns {Promise<boolean>} True if port is available
+ */
+async function isPortAvailable(port) {
+    return new Promise((resolve) => {
+        const server = app.listen(port, () => {
+            server.close(() => resolve(true));
+        });
+        server.on('error', () => resolve(false));
+    });
+}
+
+/**
+ * Find next available port starting from a base port
+ * @param {number} startPort - Port to start checking from
+ * @returns {Promise<number>} First available port
+ */
+async function findAvailablePort(startPort) {
+    let port = startPort;
+    while (port < startPort + 10) {
+        // Check up to 10 ports
+        if (await isPortAvailable(port)) {
+            return port;
+        }
+        port++;
+    }
+    throw new Error(`No available ports found between ${startPort} and ${port - 1}`);
+}
 
 // Middleware
 app.use(cors());
@@ -167,7 +200,9 @@ app.post('/api/ai', async (req, res) => {
 
         if (!apiKey) {
             return res.status(400).json({
-                error: { message: 'AI API key not configured. Please add your API key in settings.' }
+                error: {
+                    message: 'AI API key not configured. Please add your API key in settings.'
+                }
             });
         }
 
@@ -241,20 +276,34 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', message: 'List Manager dev server is running' });
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`
+// Start server with automatic port detection
+(async () => {
+    try {
+        const PORT = await findAvailablePort(DEFAULT_PORT);
+        const portChanged = PORT !== DEFAULT_PORT;
+
+        app.listen(PORT, () => {
+            console.log(`
 ╔════════════════════════════════════════════════╗
 ║   List Manager - Development Server           ║
 ╠════════════════════════════════════════════════╣
-║  Server:  http://localhost:${PORT}               ║
-║  Status:  Running                              ║
+║  Server:  http://localhost:${PORT}${PORT < 10000 ? '               ' : '              '}║
+║  Status:  Running                              ║${portChanged ? `
+║                                                ║
+║  ⚠️  Port ${DEFAULT_PORT} was in use                        ║
+║  📍 Using port ${PORT} instead                      ║` : ''}
 ║                                                ║
 ║  Features:                                     ║
 ║  ✓ Static file serving                        ║
-║  ✓ Claude API proxy (CORS bypass)             ║
+║  ✓ Filesystem storage API                     ║
+║  ✓ AI API proxy (CORS bypass)                 ║
 ║                                                ║
 ║  Press Ctrl+C to stop                          ║
 ╚════════════════════════════════════════════════╝
-    `);
-});
+            `);
+        });
+    } catch (error) {
+        console.error('Failed to start server:', error.message);
+        process.exit(1);
+    }
+})();
