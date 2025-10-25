@@ -356,19 +356,19 @@ npm run security:audit
 npm run validate
 ```
 
-### For Contributors
+### Customizing for Your Needs
 
-Before committing changes:
+This is a personal project - feel free to fork and modify it! If you want to customize:
 
-1. Run `npm run validate` to ensure code quality
-2. Test manually in browser (desktop and mobile)
-3. Update CHANGELOG.md if needed
+1. Fork the repository
+2. Make your changes
+3. Run `npm run validate` to check code quality
+4. Test in your browser
 
-**Full Details**: See [DEVELOPMENT.md](DEVELOPMENT.md) for complete development guide including:
-- Project structure deep dive
-- Coding standards
-- Testing checklist
-- Contributing guidelines
+**Full Details**: See [DEVELOPMENT.md](DEVELOPMENT.md) for development guide including:
+- Project structure
+- Code quality tools
+- Testing approaches
 
 ## FAQ
 
