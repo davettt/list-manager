@@ -1,25 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- Background with gradient -->
+  <!-- Vibrant gradient background -->
   <defs>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+    <linearGradient id="logoBgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
     </linearGradient>
+    <filter id="logoShadow">
+      <feDropShadow dx="0" dy="1" stdDeviation="0.5" flood-opacity="0.3"/>
+    </filter>
   </defs>
 
-  <rect width="32" height="32" rx="6" fill="url(#bgGradient)"/>
+  <rect width="32" height="32" rx="7" fill="url(#logoBgGradient)"/>
 
-  <!-- Checklist items -->
-  <!-- Item 1 - checked with green checkmark -->
-  <rect x="6" y="7" width="5" height="5" rx="1" fill="#fff" opacity="0.95"/>
-  <path d="M 7.5 9.5 L 9 11 L 10.5 8.5" stroke="#10b981" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="13" y="8" width="13" height="3" rx="1" fill="#fff" opacity="0.95"/>
+  <!-- Checklist items with bold styling -->
+  <!-- Item 1 - checked with vibrant green checkmark -->
+  <rect x="6" y="6.5" width="6" height="6" rx="1.5" fill="#ffffff" filter="url(#logoShadow)"/>
+  <path d="M 7.5 9.5 L 9.2 11.2 L 11.5 8" stroke="#10b981" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="14" y="7.5" width="12" height="3" rx="1.5" fill="#ffffff" filter="url(#logoShadow)"/>
 
-  <!-- Item 2 - unchecked with subtle orange tint -->
-  <rect x="6" y="14" width="5" height="5" rx="1" fill="#fef3c7" opacity="0.8"/>
-  <rect x="13" y="15" width="13" height="3" rx="1" fill="#fff" opacity="0.7"/>
+  <!-- Item 2 - unchecked with orange accent -->
+  <rect x="6" y="13.5" width="6" height="6" rx="1.5" fill="#fed7aa" stroke="#fb923c" stroke-width="0.5" filter="url(#logoShadow)"/>
+  <rect x="14" y="14.5" width="12" height="3" rx="1.5" fill="#ffffff" opacity="0.9" filter="url(#logoShadow)"/>
 
-  <!-- Item 3 - unchecked -->
-  <rect x="6" y="21" width="5" height="5" rx="1" fill="#fff" opacity="0.6"/>
-  <rect x="13" y="22" width="13" height="3" rx="1" fill="#fff" opacity="0.6"/>
+  <!-- Item 3 - unchecked with subtle styling -->
+  <rect x="6" y="20.5" width="6" height="6" rx="1.5" fill="#e0f2fe" stroke="#0ea5e9" stroke-width="0.5" filter="url(#logoShadow)"/>
+  <rect x="14" y="21.5" width="12" height="3" rx="1.5" fill="#ffffff" opacity="0.8" filter="url(#logoShadow)"/>
 </svg>

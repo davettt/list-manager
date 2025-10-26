@@ -13,7 +13,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { readFile, writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
+import { existsSync, unlinkSync } from 'fs';
 import dotenv from 'dotenv';
 
 // Load environment variables from local_data/.env.local (user's keys)
@@ -71,11 +71,109 @@ const DATA_DIR = path.join(__dirname, 'local_data');
 const LISTS_FILE = path.join(DATA_DIR, 'lists.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const ENV_FILE = path.join(DATA_DIR, '.env.local');
+const LOCK_FILE = path.join(DATA_DIR, '.lock');
 
 // Ensure data directory exists
 if (!existsSync(DATA_DIR)) {
     await mkdir(DATA_DIR, { recursive: true });
 }
+
+// ===================================
+// Single Instance Lock
+// ===================================
+
+/**
+ * Check if a process is running
+ * @param {number} pid - Process ID to check
+ * @returns {boolean} True if process is running
+ */
+function isProcessRunning(pid) {
+    try {
+        // Sending signal 0 checks if process exists without actually sending a signal
+        process.kill(pid, 0);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
+ * Check if another instance is already running
+ * Prevents multiple server instances from causing race conditions
+ */
+if (existsSync(LOCK_FILE)) {
+    try {
+        const lockData = await readFile(LOCK_FILE, 'utf-8');
+        const lockInfo = JSON.parse(lockData);
+
+        // Check if the process is still running
+        if (isProcessRunning(lockInfo.pid)) {
+            console.error(`
+╔════════════════════════════════════════════════╗
+║   ⚠️  ERROR: Server Already Running            ║
+╠════════════════════════════════════════════════╣
+║                                                ║
+║  Another instance is already running:          ║
+║  PID:       ${String(lockInfo.pid).padEnd(35)} ║
+║  Started:   ${new Date(lockInfo.started).toLocaleString().padEnd(35)} ║
+║  Port:      ${String(lockInfo.port || 'detecting...').padEnd(35)} ║
+║                                                ║
+║  To start a new instance:                      ║
+║  1. Stop the existing server (Ctrl+C)          ║
+║  2. Or manually delete: local_data/.lock       ║
+║                                                ║
+╚════════════════════════════════════════════════╝
+            `);
+            process.exit(1);
+        } else {
+            // Stale lock file - process is no longer running
+            console.log('Removing stale lock file from previous crashed instance...');
+            unlinkSync(LOCK_FILE);
+        }
+    } catch (error) {
+        // Lock file is corrupted, remove it and continue
+        console.warn('Lock file corrupted, removing...');
+        unlinkSync(LOCK_FILE);
+    }
+}
+
+// Create lock file
+await writeFile(LOCK_FILE, JSON.stringify({
+    pid: process.pid,
+    started: new Date().toISOString(),
+    port: null
+}, null, 2));
+
+/**
+ * Clean up lock file on exit
+ */
+function cleanup() {
+    try {
+        if (existsSync(LOCK_FILE)) {
+            unlinkSync(LOCK_FILE);
+            console.log('\nServer stopped, lock file removed.');
+        }
+    } catch (error) {
+        console.error('Error removing lock file:', error.message);
+    }
+}
+
+// Handle various exit scenarios
+process.on('SIGINT', () => {
+    console.log('\n\nReceived SIGINT, shutting down...');
+    cleanup();
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    console.log('\n\nReceived SIGTERM, shutting down...');
+    cleanup();
+    process.exit(0);
+});
+
+process.on('exit', () => {
+    cleanup();
+});
 
 // ===================================
 // Filesystem Storage API
@@ -281,6 +379,13 @@ app.get('/api/health', (req, res) => {
     try {
         const PORT = await findAvailablePort(DEFAULT_PORT);
         const portChanged = PORT !== DEFAULT_PORT;
+
+        // Update lock file with port number
+        await writeFile(LOCK_FILE, JSON.stringify({
+            pid: process.pid,
+            started: new Date().toISOString(),
+            port: PORT
+        }, null, 2));
 
         app.listen(PORT, () => {
             console.log(`
