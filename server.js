@@ -12,9 +12,10 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { readFile, writeFile, mkdir } from 'fs/promises';
+import { readFile, writeFile, mkdir, readdir, unlink } from 'fs/promises';
 import { existsSync, unlinkSync } from 'fs';
 import dotenv from 'dotenv';
+import { v4 as uuidv4 } from 'uuid';
 
 // Load environment variables from local_data/.env.local (user's keys)
 dotenv.config({
@@ -34,7 +35,7 @@ const DEFAULT_PORT = process.env.PORT || 3000;
  * @returns {Promise<boolean>} True if port is available
  */
 async function isPortAvailable(port) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
         const server = app.listen(port, () => {
             server.close(() => resolve(true));
         });
@@ -70,12 +71,17 @@ app.use(express.static(__dirname));
 const DATA_DIR = path.join(__dirname, 'local_data');
 const LISTS_FILE = path.join(DATA_DIR, 'lists.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+const NOTES_FILE = path.join(DATA_DIR, 'notes.json');
+const NOTES_DIR = path.join(DATA_DIR, 'notes');
 const ENV_FILE = path.join(DATA_DIR, '.env.local');
 const LOCK_FILE = path.join(DATA_DIR, '.lock');
 
-// Ensure data directory exists
+// Ensure data directories exist
 if (!existsSync(DATA_DIR)) {
     await mkdir(DATA_DIR, { recursive: true });
+}
+if (!existsSync(NOTES_DIR)) {
+    await mkdir(NOTES_DIR, { recursive: true });
 }
 
 // ===================================
@@ -138,11 +144,18 @@ if (existsSync(LOCK_FILE)) {
 }
 
 // Create lock file
-await writeFile(LOCK_FILE, JSON.stringify({
-    pid: process.pid,
-    started: new Date().toISOString(),
-    port: null
-}, null, 2));
+await writeFile(
+    LOCK_FILE,
+    JSON.stringify(
+        {
+            pid: process.pid,
+            started: new Date().toISOString(),
+            port: null
+        },
+        null,
+        2
+    )
+);
 
 /**
  * Clean up lock file on exit
@@ -284,6 +297,208 @@ app.post('/api/data/api-key', async (req, res) => {
 });
 
 // ===================================
+// Notes Storage API
+// ===================================
+
+// Get all notes (metadata only)
+app.get('/api/data/notes', async (req, res) => {
+    try {
+        if (!existsSync(NOTES_FILE)) {
+            return res.json([]);
+        }
+        const data = await readFile(NOTES_FILE, 'utf-8');
+        res.json(JSON.parse(data));
+    } catch (error) {
+        console.error('Error reading notes:', error);
+        res.status(500).json({ error: 'Failed to read notes' });
+    }
+});
+
+// Create new note
+app.post('/api/data/notes', async (req, res) => {
+    try {
+        const { title, category, tags } = req.body;
+
+        if (!title || !title.trim()) {
+            return res.status(400).json({ error: 'Title is required' });
+        }
+
+        // Generate note ID
+        const id = uuidv4();
+        const now = new Date().toISOString();
+
+        // Create metadata entry
+        const noteMetadata = {
+            id,
+            title: title.trim().slice(0, 200),
+            category: category || 'personal',
+            tags: Array.isArray(tags) ? tags : [],
+            favorite: false,
+            content: {
+                tldr: null,
+                aiAnalyzed: false
+            },
+            metadata: {
+                created: now,
+                modified: now,
+                wordCount: 0,
+                characterCount: 0
+            }
+        };
+
+        // Read existing notes
+        let notes = [];
+        if (existsSync(NOTES_FILE)) {
+            const data = await readFile(NOTES_FILE, 'utf-8');
+            notes = JSON.parse(data);
+        }
+
+        // Add new note
+        notes.push(noteMetadata);
+        await writeFile(NOTES_FILE, JSON.stringify(notes, null, 2));
+
+        // Create empty markdown file
+        const noteFile = path.join(NOTES_DIR, `${id}.md`);
+        await writeFile(noteFile, '');
+
+        res.status(201).json(noteMetadata);
+    } catch (error) {
+        console.error('Error creating note:', error);
+        res.status(500).json({ error: 'Failed to create note' });
+    }
+});
+
+// Get single note with content
+app.get('/api/data/notes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Validate ID format
+        if (!id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            return res.status(400).json({ error: 'Invalid note ID' });
+        }
+
+        // Get metadata
+        if (!existsSync(NOTES_FILE)) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        const data = await readFile(NOTES_FILE, 'utf-8');
+        const notes = JSON.parse(data);
+        const note = notes.find(n => n.id === id);
+
+        if (!note) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        // Get content
+        const noteFile = path.join(NOTES_DIR, `${id}.md`);
+        let content = '';
+        if (existsSync(noteFile)) {
+            content = await readFile(noteFile, 'utf-8');
+        }
+
+        res.json({
+            ...note,
+            content
+        });
+    } catch (error) {
+        console.error('Error reading note:', error);
+        res.status(500).json({ error: 'Failed to read note' });
+    }
+});
+
+// Update note
+app.put('/api/data/notes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, category, tags, content, favorite } = req.body;
+
+        // Validate ID format
+        if (!id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            return res.status(400).json({ error: 'Invalid note ID' });
+        }
+
+        // Read notes
+        if (!existsSync(NOTES_FILE)) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        const data = await readFile(NOTES_FILE, 'utf-8');
+        let notes = JSON.parse(data);
+        const noteIndex = notes.findIndex(n => n.id === id);
+
+        if (noteIndex === -1) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        // Update metadata
+        const now = new Date().toISOString();
+        if (title !== undefined) notes[noteIndex].title = title.trim().slice(0, 200);
+        if (category !== undefined) notes[noteIndex].category = category;
+        if (Array.isArray(tags)) notes[noteIndex].tags = tags;
+        if (favorite !== undefined) notes[noteIndex].favorite = favorite;
+        notes[noteIndex].metadata.modified = now;
+
+        // Update content if provided
+        if (content !== undefined) {
+            const noteFile = path.join(NOTES_DIR, `${id}.md`);
+            await writeFile(noteFile, content);
+            notes[noteIndex].metadata.wordCount = content.split(/\s+/).length;
+            notes[noteIndex].metadata.characterCount = content.length;
+        }
+
+        // Save updated notes
+        await writeFile(NOTES_FILE, JSON.stringify(notes, null, 2));
+
+        res.json(notes[noteIndex]);
+    } catch (error) {
+        console.error('Error updating note:', error);
+        res.status(500).json({ error: 'Failed to update note' });
+    }
+});
+
+// Delete note
+app.delete('/api/data/notes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Validate ID format
+        if (!id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            return res.status(400).json({ error: 'Invalid note ID' });
+        }
+
+        // Read notes
+        if (!existsSync(NOTES_FILE)) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        const data = await readFile(NOTES_FILE, 'utf-8');
+        let notes = JSON.parse(data);
+        const noteIndex = notes.findIndex(n => n.id === id);
+
+        if (noteIndex === -1) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        // Remove from metadata
+        notes.splice(noteIndex, 1);
+        await writeFile(NOTES_FILE, JSON.stringify(notes, null, 2));
+
+        // Delete markdown file
+        const noteFile = path.join(NOTES_DIR, `${id}.md`);
+        if (existsSync(noteFile)) {
+            await unlink(noteFile);
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting note:', error);
+        res.status(500).json({ error: 'Failed to delete note' });
+    }
+});
+
+// ===================================
 // AI API Proxy
 // ===================================
 
@@ -292,9 +507,33 @@ app.post('/api/ai', async (req, res) => {
     try {
         const requestBody = req.body;
 
-        // Read API key from environment (more secure than request body)
-        const apiKey = process.env.AI_API_KEY;
-        const provider = process.env.AI_PROVIDER || 'claude';
+        // Read API key from environment first, then fall back to settings.json
+        let apiKey = process.env.AI_API_KEY;
+        let provider = process.env.AI_PROVIDER || 'claude';
+
+        // If not in environment, try to read from settings.json
+        if (!apiKey) {
+            try {
+                const settingsContent = await readFile(SETTINGS_FILE, 'utf-8');
+                const settings = JSON.parse(settingsContent);
+                const aiSettings = settings.ai || {};
+
+                // Try to get API key from settings
+                apiKey = aiSettings.apiKey || settings.apiKey;
+                if (apiKey) {
+                    // If API key is base64 encoded (starts with specific pattern), decode it
+                    try {
+                        apiKey = Buffer.from(apiKey, 'base64').toString('utf-8');
+                    } catch {
+                        // If decode fails, assume it's not base64 encoded
+                    }
+                }
+
+                provider = aiSettings.provider || provider;
+            } catch (e) {
+                // settings.json doesn't exist or is invalid, continue with env vars
+            }
+        }
 
         if (!apiKey) {
             return res.status(400).json({
@@ -381,11 +620,18 @@ app.get('/api/health', (req, res) => {
         const portChanged = PORT !== DEFAULT_PORT;
 
         // Update lock file with port number
-        await writeFile(LOCK_FILE, JSON.stringify({
-            pid: process.pid,
-            started: new Date().toISOString(),
-            port: PORT
-        }, null, 2));
+        await writeFile(
+            LOCK_FILE,
+            JSON.stringify(
+                {
+                    pid: process.pid,
+                    started: new Date().toISOString(),
+                    port: PORT
+                },
+                null,
+                2
+            )
+        );
 
         app.listen(PORT, () => {
             console.log(`
@@ -393,10 +639,14 @@ app.get('/api/health', (req, res) => {
 ║   List Manager - Development Server           ║
 ╠════════════════════════════════════════════════╣
 ║  Server:  http://localhost:${PORT}${PORT < 10000 ? '               ' : '              '}║
-║  Status:  Running                              ║${portChanged ? `
+║  Status:  Running                              ║${
+                portChanged
+                    ? `
 ║                                                ║
 ║  ⚠️  Port ${DEFAULT_PORT} was in use                        ║
-║  📍 Using port ${PORT} instead                      ║` : ''}
+║  📍 Using port ${PORT} instead                      ║`
+                    : ''
+            }
 ║                                                ║
 ║  Features:                                     ║
 ║  ✓ Static file serving                        ║

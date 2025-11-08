@@ -34,7 +34,5 @@ build/
 .claude/
 
 # User data (local storage)
-local_data/*.json
-local_data/.env.local
-local_data/.lock
+local_data/
 !local_data/.gitkeep

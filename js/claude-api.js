@@ -17,7 +17,7 @@ const ClaudeAPI = (function () {
             endpoint: isLocalDev
                 ? '/api/ai?provider=claude'
                 : 'https://api.anthropic.com/v1/messages',
-            defaultModel: 'claude-sonnet-4-20250514',
+            defaultModel: 'claude-haiku-4-5',
             maxTokens: 1000,
             apiVersion: '2023-06-01'
         },
@@ -458,6 +458,7 @@ Requirements:
 
     // Expose public API
     return {
+        makeApiRequest,
         testConnection,
         generateListSuggestions,
         expandItem,

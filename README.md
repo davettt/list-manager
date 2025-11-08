@@ -1,19 +1,25 @@
 # List Manager
 
-**Privacy-first list management with optional AI suggestions**
+**Privacy-first list and notes management with optional AI assistance**
 
-A simple, fast, and private list manager that stores your data locally on your computer. Create any type of list (travel, shopping, projects, etc.), search and organize them, and optionally get AI-powered suggestions using your own AI API key (Claude, ChatGPT, or Gemini).
+A simple, fast, and private tool that stores your data locally on your computer. Create any type of list or note (travel, shopping, projects, ideas, etc.), search and organize them, and optionally get AI-powered suggestions and writing assistance using your own AI API key (Claude, ChatGPT, or Gemini).
 
 ## Features
 
 - **Privacy First**: All data stays local on your computer. No accounts, no tracking, no cloud servers.
-- **Persistent Storage**: Data saved to filesystem for reliability (no more lost lists from browser cache clears!)
+- **Persistent Storage**: Data saved to filesystem for reliability (no more lost lists or notes from browser cache clears!)
 - **Flexible Lists**: Create any type of list with categories, tags, priorities, and deadlines
-- **Smart Search**: Real-time search across list names, categories, tags, and items
-- **AI Suggestions** (Optional): Get relevant item suggestions using your own AI API key (supports Claude, ChatGPT, Gemini)
+- **Markdown Notes**: Write rich notes with markdown formatting, live preview, and split-pane editing
+- **Smart Search**: Real-time search across lists, notes, categories, tags, and items
+- **AI Assistance** (Optional):
+  - Get item suggestions for lists
+  - Generate TLDR summaries for notes
+  - Grammar and spelling checking for notes
+  - Supports Claude, ChatGPT, or Gemini (use your own API key)
 - **Export/Import**: Backup your data anytime as JSON files
 - **Light & Dark Themes**: Choose your preferred theme or use system settings
 - **Mobile Friendly**: Responsive design works on all devices
+- **Cloud Backup**: Notes stored as markdown files, easily backed up to any cloud service (Tresorit, Dropbox, Google Drive, etc.)
 
 ## Quick Start
 
@@ -50,9 +56,30 @@ A simple, fast, and private list manager that stores your data locally on your c
 - Filter by category, tags, or favorites
 - Toggle between grid and list view
 
+**Create & Edit Notes:**
+- Click the "Notes" tab to switch to notes view
+- Click the "+" button to create a new note
+- Write in the left pane with markdown support (bold, italic, headers, lists, links, code blocks, tables, etc.)
+- See live preview in the right pane
+- Notes are saved automatically as you type
+- Organize notes by category (Personal, Work, Projects, Ideas, Other)
+- Star notes to mark them as favorites
+- Search notes by title or category
+
+**AI Writing Assistance for Notes:**
+- Click "TLDR" button to generate a concise summary of your note
+- Click "Grammar" button to check spelling and get writing suggestions
+- AI results are shown in a modal for easy review
+
 **Export Your Data:**
 - Click "Export All" to download your data as JSON
 - Keep regular backups!
+
+**Cloud Backup for Notes:**
+- Your notes are stored as markdown files in `local_data/notes/`
+- Point your cloud storage app (Tresorit, Dropbox, Google Drive, etc.) to sync this folder
+- Access your notes on any device that has the cloud service installed
+- Markdown files can be viewed/edited in any text editor or markdown app
 
 ## AI Features (Optional)
 
@@ -97,7 +124,7 @@ List Manager can integrate with multiple AI providers to provide smart suggestio
 
 Now you'll see an "AI Suggest" button when viewing lists!
 
-### Using AI Suggestions
+### Using AI Features with Lists
 
 1. Open a list
 2. Click "AI Suggest" button
@@ -105,7 +132,15 @@ Now you'll see an "AI Suggest" button when viewing lists!
 4. Select which ones to add (or add all)
 5. Items from AI are marked with a ✨ icon
 
-**Note**: AI features require an internet connection and will use your Claude API credits.
+### Using AI Features with Notes
+
+1. Open a note in the Notes tab
+2. Click "TLDR" to generate a summary of your note
+3. Click "Grammar" to check spelling and get writing suggestions
+4. Review the AI feedback in the modal dialog
+5. Copy feedback to clipboard or insert summaries into your note
+
+**Note**: AI features require an internet connection and will use your API provider's credits.
 
 ## Data Management
 
@@ -197,6 +232,7 @@ In Settings → Data Management, you can clear all data. **This cannot be undone
 
 **What stays local:**
 - All your lists and items (saved to `local_data/lists.json`)
+- All your notes (metadata in `local_data/notes.json`, content in `local_data/notes/*.md`)
 - All settings (saved to `local_data/settings.json`)
 - Your API key (saved to `local_data/.env.local` - git ignored for security)
 - Everything!
@@ -293,18 +329,26 @@ list-manager/
 ├── local_data/            # Your data (gitignored)
 │   ├── .gitkeep          # Ensures folder is tracked
 │   ├── lists.json        # Your lists (created on first use)
+│   ├── notes.json        # Your notes metadata (created on first use)
+│   ├── notes/            # Your note markdown files
+│   │   └── [note-id].md  # Individual note files
 │   ├── settings.json     # Your settings (created on first use)
 │   └── .env.local        # Your API key (created when you add key)
 ├── styles/
 │   ├── main.css          # Layout and base styles
 │   ├── components.css    # UI components
-│   └── themes.css        # Color themes
+│   ├── themes.css        # Color themes
+│   └── notes.css         # Notes-specific styling
 ├── js/
 │   ├── app.js            # Main application logic
 │   ├── storage.js        # Filesystem storage wrapper
 │   ├── claude-api.js     # Multi-provider AI integration
 │   ├── ui-helpers.js     # DOM utilities
-│   └── utils.js          # General utilities
+│   ├── utils.js          # General utilities
+│   ├── notes-app.js      # Notes app logic
+│   ├── notes-storage.js  # Notes API client
+│   ├── notes-editor.js   # Notes editor functionality
+│   └── notes-ai.js       # Notes AI features
 └── assets/
     └── sample-data.json  # Sample lists for demo
 ```
@@ -397,7 +441,22 @@ A: Generate a new one from your AI provider's console. Update it in Settings. Ol
 A: The server enables filesystem storage (more reliable than browser storage) and AI features. It runs locally on your computer.
 
 **Q: Can I still use it without AI features?**
-A: Yes! AI features are completely optional. The app works great for managing lists without any AI.
+A: Yes! AI features are completely optional. The app works great for managing lists and notes without any AI.
+
+**Q: Can I use Notes without Lists?**
+A: Yes! You can use just Notes if you prefer. Click the "Notes" tab and ignore the Lists tab entirely.
+
+**Q: What markdown features are supported in Notes?**
+A: Full markdown support including: headers, bold/italic, lists, links, code blocks, tables, blockquotes, images, and more.
+
+**Q: How do I access my notes on my phone?**
+A: Your notes are stored as markdown files in `local_data/notes/`. Point your cloud storage app (Tresorit, Dropbox, Google Drive) to sync this folder, then use any markdown editor on your phone to view/edit them.
+
+**Q: Can I convert a List to a Note?**
+A: Not automatically, but you can copy list items and paste them into a note. The items become markdown formatted text.
+
+**Q: Are notes encrypted?**
+A: Notes are plain markdown files stored locally. They have the same privacy as lists. If you use cloud storage for sync, use a service with encryption (like Tresorit).
 
 ## Support & Issues
 
@@ -418,7 +477,15 @@ Built with:
 
 ---
 
-**Version**: 1.1.0
-**Last Updated**: 2025-01-26
+**Version**: 1.2.0
+**Last Updated**: 2025-11-08
 
 Made with care for people who value privacy and simplicity.
+
+### What's New in v1.2.0
+
+- ✨ **Notes Feature** - Write and manage markdown notes with live preview
+- 🤖 **AI for Notes** - Generate TLDR summaries and check grammar/spelling
+- 📄 **Split-Pane Editor** - Edit markdown on the left, preview on the right
+- ☁️ **Cloud Backup Support** - Export notes as markdown files for easy cloud sync
+- 🎨 **Notes UI** - Sidebar with notes list, search, and favorites

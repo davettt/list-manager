@@ -5,6 +5,38 @@ All notable changes to List Manager.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-11-08
+
+### Added
+- **Notes Feature** - Full markdown-based note-taking system with live preview
+  - Create, edit, and organize notes with categories (Personal, Work, Projects, Ideas, Other)
+  - Markdown support with live split-pane editor and preview
+  - Search and filter notes by title or category
+  - Star notes to mark as favorites
+  - Auto-save as user types
+  - Export notes as markdown files for cloud backup
+- **AI Writing Assistance for Notes**
+  - TLDR button to generate concise summaries of notes
+  - Grammar checking to detect and fix spelling/punctuation errors
+  - AI feedback displayed in modal dialogs for easy review
+- **Enhanced UI Tooltips**
+  - Helpful tooltips on key interface elements
+  - Grammar suggestions with visual feedback
+  - Better user guidance throughout the app
+- **Notes Storage**
+  - Notes metadata stored in `local_data/notes.json`
+  - Note content stored as individual markdown files in `local_data/notes/`
+  - Seamless integration with existing cloud backup workflows
+
+### Changed
+- Notes tab added alongside existing Lists tab
+- Updated README with complete Notes feature documentation
+- Enhanced Settings panel for Notes-related configuration
+
+### Fixed
+- Improved grammar detection accuracy in AI writing assistance
+- Better tooltip positioning and styling
+
 ## [1.1.0] - 2025-01-26
 
 ### Changed - BREAKING

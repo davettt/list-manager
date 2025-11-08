@@ -873,9 +873,9 @@
     }
 
     function updateAiButtonVisibility() {
-        const aiBtn = document.getElementById('ai-suggest-btn');
-        if (aiBtn) {
-            aiBtn.style.display = state.settings.ai.enabled ? 'inline-flex' : 'none';
+        const aiGroup = document.getElementById('ai-suggest-group');
+        if (aiGroup) {
+            aiGroup.style.display = state.settings.ai.enabled ? 'flex' : 'none';
         }
 
         const aiCheckbox = document.getElementById('ai-enabled-checkbox');
