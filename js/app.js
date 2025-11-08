@@ -219,6 +219,7 @@
         document.getElementById('settings-close-btn')?.addEventListener('click', closeSettings);
         document.getElementById('test-api-btn')?.addEventListener('click', testApiConnection);
         document.getElementById('theme-select')?.addEventListener('change', changeTheme);
+        document.getElementById('ai-language-select')?.addEventListener('change', changeLanguage);
         document
             .getElementById('ai-enabled-checkbox')
             ?.addEventListener('change', toggleAiFeatures);
@@ -903,6 +904,7 @@
         document.getElementById('api-key-input').value = apiKey || '';
         document.getElementById('theme-select').value = state.settings.display.theme;
         document.getElementById('ai-enabled-checkbox').checked = state.settings.ai.enabled;
+        document.getElementById('ai-language-select').value = state.settings.ai.language || 'en';
 
         UI.showModal('settings-modal');
     }
@@ -917,6 +919,13 @@
         state.settings = await Storage.getSettings();
         UI.updateTheme(theme);
         UI.showToast(`Theme changed to ${theme}`, 'success');
+    }
+
+    async function changeLanguage(e) {
+        const language = e.target.value;
+        await Storage.updateSetting('ai.language', language);
+        state.settings = await Storage.getSettings();
+        UI.showToast('Language preference updated', 'success');
     }
 
     async function toggleView() {

@@ -447,6 +447,7 @@ const NotesEditor = (() => {
         updatePreview,
         saveNote,
         saveNoteMetadata,
-        updateStatus
+        updateStatus,
+        updateBackupButtonVisibility
     };
 })();

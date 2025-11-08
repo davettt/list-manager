@@ -398,6 +398,9 @@ const NotesApp = (() => {
         }
         // eslint-disable-next-line no-undef
         await NotesEditor.loadNote(noteId);
+
+        // Auto-close sidebar when note is selected
+        closeSidebar();
     }
 
     /**

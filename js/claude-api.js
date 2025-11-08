@@ -233,6 +233,45 @@ const ClaudeAPI = (function () {
     }
 
     /**
+     * Get language setting for prompts
+     * @returns {Promise<string>} Language code
+     */
+    async function getLanguageSetting() {
+        try {
+            // eslint-disable-next-line no-undef
+            if (typeof Storage !== 'undefined' && Storage.getSettings) {
+                const settings = await Storage.getSettings();
+                return settings?.ai?.language || 'en';
+            }
+        } catch (e) {
+            console.error('Failed to get language setting:', e);
+        }
+        return 'en';
+    }
+
+    /**
+     * Get language display name
+     * @param {string} languageCode - Language code
+     * @returns {string} Language display name
+     */
+    function getLanguageName(languageCode) {
+        const languageNames = {
+            en: 'English',
+            'en-GB': 'British English',
+            'en-AU': 'Australian English',
+            es: 'Spanish',
+            fr: 'French',
+            de: 'German',
+            it: 'Italian',
+            pt: 'Portuguese',
+            ja: 'Japanese',
+            zh: 'Chinese',
+            ru: 'Russian'
+        };
+        return languageNames[languageCode] || 'English';
+    }
+
+    /**
      * Generate list item suggestions
      * @param {string} apiKey - API key
      * @param {Object} listData - List data (name, category, tags, existing items)
@@ -243,6 +282,11 @@ const ClaudeAPI = (function () {
     async function generateListSuggestions(apiKey, listData, provider = 'claude', model = '') {
         try {
             const { name, category, tags, items } = listData;
+            const language = await getLanguageSetting();
+            const languageInstruction =
+                language && language !== 'en'
+                    ? `Please respond in ${getLanguageName(language)}. `
+                    : '';
 
             const existingItems =
                 items && items.length > 0 ? items.map(item => item.text).join(', ') : 'none yet';
@@ -250,7 +294,7 @@ const ClaudeAPI = (function () {
             const systemPrompt =
                 'You are a helpful assistant that generates relevant list items. Always respond with valid JSON array of strings only, no markdown formatting.';
 
-            const prompt = `Generate 5-10 relevant items for a list with these details:
+            const prompt = `${languageInstruction}Generate 5-10 relevant items for a list with these details:
 
 List Name: ${name}
 Category: ${category || 'not specified'}
@@ -291,12 +335,18 @@ Example format: ["Item 1", "Item 2", "Item 3"]`;
      */
     async function expandItem(apiKey, itemText, listContext = '', provider = 'claude', model = '') {
         try {
+            const language = await getLanguageSetting();
+            const languageInstruction =
+                language && language !== 'en'
+                    ? `Please respond in ${getLanguageName(language)}. `
+                    : '';
+
             const systemPrompt =
                 'You are a helpful assistant that expands vague tasks into specific, actionable items. Always respond with valid JSON array of strings only, no markdown formatting.';
 
             const contextInfo = listContext ? `\nList context: ${listContext}` : '';
 
-            const prompt = `Expand this vague item into 3-5 specific, actionable alternatives:
+            const prompt = `${languageInstruction}Expand this vague item into 3-5 specific, actionable alternatives:
 
 Item: ${itemText}${contextInfo}
 
@@ -339,13 +389,19 @@ Example format: ["Specific item 1", "Specific item 2", "Specific item 3"]`;
         model = ''
     ) {
         try {
+            const language = await getLanguageSetting();
+            const languageInstruction =
+                language && language !== 'en'
+                    ? `Please respond in ${getLanguageName(language)}. `
+                    : '';
+
             const systemPrompt =
                 'You are a helpful assistant that categorizes lists. Always respond with valid JSON only, no markdown formatting.';
 
             const itemsText =
                 items.length > 0 ? items.map(item => item.text).join(', ') : 'no items yet';
 
-            const prompt = `Suggest a category and 3 relevant tags for this list:
+            const prompt = `${languageInstruction}Suggest a category and 3 relevant tags for this list:
 
 List Name: ${listName}
 Items: ${itemsText}

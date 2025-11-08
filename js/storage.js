@@ -21,7 +21,8 @@ const Storage = (function () {
             enabled: false,
             autoSuggest: false,
             provider: 'claude',
-            model: ''
+            model: '',
+            language: 'en'
         },
         version: CURRENT_VERSION
     };

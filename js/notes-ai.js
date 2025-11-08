@@ -32,14 +32,37 @@ const NotesAI = (() => {
             }
 
             const provider = aiSettings.provider || 'claude';
+            const language = aiSettings.language || 'en';
 
-            return { apiKey, provider };
+            return { apiKey, provider, language };
         } catch (error) {
             if (error.message.includes('API key')) {
                 throw error;
             }
             throw new Error('Failed to load AI settings. Please check your configuration.');
         }
+    }
+
+    /**
+     * Get language display name for prompt instructions
+     * @param {string} languageCode - Language code (e.g., 'en-AU', 'es', 'fr')
+     * @returns {string} Language display name
+     */
+    function getLanguageName(languageCode) {
+        const languageNames = {
+            en: 'English',
+            'en-GB': 'British English',
+            'en-AU': 'Australian English',
+            es: 'Spanish',
+            fr: 'French',
+            de: 'German',
+            it: 'Italian',
+            pt: 'Portuguese',
+            ja: 'Japanese',
+            zh: 'Chinese',
+            ru: 'Russian'
+        };
+        return languageNames[languageCode] || 'English';
     }
 
     /**
@@ -160,9 +183,13 @@ const NotesAI = (() => {
         const loadingModal = showLoadingModal('Generating summary...');
 
         try {
-            const { provider } = await getAISettings();
+            const { provider, language } = await getAISettings();
 
-            const prompt = `Please create a concise TLDR (2-3 sentences) summarizing this note. Be clear and concise:\n\n${content}`;
+            const languageInstruction =
+                language && language !== 'en'
+                    ? `Please respond in ${getLanguageName(language)}. `
+                    : '';
+            const prompt = `${languageInstruction}Please create a concise TLDR (2-3 sentences) summarizing this note. Be clear and concise:\n\n${content}`;
 
             const summary = await makeProxyApiCall(prompt, provider);
 
@@ -189,6 +216,80 @@ const NotesAI = (() => {
         } finally {
             state.isAnalyzing = false;
         }
+    }
+
+    /**
+     * Apply corrections to text for chunked notes
+     * @param {string} text - Current text
+     * @param {Array} corrections - Array of correction objects with {issue, location, correction}
+     * @returns {string} Text with corrections applied
+     */
+    function applyCorrectionsToText(text, corrections) {
+        if (!corrections || corrections.length === 0) {
+            return text;
+        }
+
+        let result = text;
+
+        // Process corrections from the end of the text backwards to maintain position integrity
+        const sortedCorrections = corrections
+            .filter(c => c.correction && typeof c.correction === 'string')
+            .slice()
+            .sort((a, b) => {
+                // Sort by position in text (later first) to avoid offset issues
+                const posA = result.indexOf(a.issue || '');
+                const posB = result.indexOf(b.issue || '');
+                return posB - posA;
+            });
+
+        for (const correction of sortedCorrections) {
+            // The 'issue' field typically contains what was wrong
+            // The 'correction' field contains what change was made
+            const issue = correction.issue || '';
+            const correctionDesc = correction.correction || '';
+
+            // Try multiple patterns to extract old and new text
+            let oldText = null;
+            let newText = null;
+
+            // Pattern 1: "Changed 'X' to 'Y'"
+            let match = correctionDesc.match(
+                /[Cc]hanged\s+['"']([^'"']+)['"']\s+to\s+['"']([^'"']+)['"']/
+            );
+            if (match) {
+                [, oldText, newText] = match;
+            }
+
+            // Pattern 2: "Changed X to Y" (without quotes)
+            if (!oldText) {
+                match = correctionDesc.match(/[Cc]hanged\s+(\S+)\s+to\s+(\S+)/);
+                if (match) {
+                    [, oldText, newText] = match;
+                }
+            }
+
+            // Pattern 3: Try to infer from issue field (sometimes it contains the problematic word)
+            if (!oldText && issue) {
+                // Look for the issue text in the document
+                if (result.includes(issue)) {
+                    oldText = issue;
+                    // Try to find the correction in the correction description
+                    const corrMatch = correctionDesc.match(
+                        /(?:to|with)\s+['"']?([^'"']+?)['"']?(?:\s|$)/i
+                    );
+                    if (corrMatch) {
+                        newText = corrMatch[1];
+                    }
+                }
+            }
+
+            // Apply the correction if we found what to replace
+            if (oldText && newText) {
+                result = result.replace(oldText, newText);
+            }
+        }
+
+        return result;
     }
 
     /**
@@ -247,7 +348,11 @@ const NotesAI = (() => {
         const loadingModal = showLoadingModal('Checking grammar...');
 
         try {
-            const { provider } = await getAISettings();
+            const { provider, language } = await getAISettings();
+            const languageInstruction =
+                language && language !== 'en'
+                    ? `Please respond in ${getLanguageName(language)}. `
+                    : '';
 
             // For long notes, use chunk-based processing
             const chunks = content.length > 4000 ? splitNoteIntoChunks(content, 3000) : [content];
@@ -273,7 +378,7 @@ const NotesAI = (() => {
                 }
 
                 const prompt = isChunked
-                    ? `Please review this section of a note for grammar, spelling, and clarity issues. This is section ${chunkNumber}/${chunks.length}.
+                    ? `${languageInstruction}Please review this section of a note for grammar, spelling, and clarity issues. This is section ${chunkNumber}/${chunks.length}.
 
 Return ONLY valid JSON with this structure (no markdown):
 {"corrections": [{"issue": "error description", "location": "where", "correction": "change"}], "summary": "brief"}
@@ -282,7 +387,7 @@ Focus on this section only. Include ONLY real grammar/spelling errors. Keep corr
 
 SECTION:
 ${chunkText}`
-                    : `Please review this note for grammar, spelling, and clarity issues.
+                    : `${languageInstruction}Please review this note for grammar, spelling, and clarity issues.
 
 Return your response as ONLY valid JSON (no markdown, no extra text). The JSON must have this exact structure:
 {
@@ -340,9 +445,18 @@ ${chunkText}`;
                         allCorrections = allCorrections.concat(parsed.corrections);
                     }
 
-                    // For non-chunked, use the corrected text
-                    if (!isChunked && parsed.correctedText) {
-                        allCorrectedText = parsed.correctedText;
+                    // Use corrected text from AI (for all notes, chunked or not)
+                    if (parsed.correctedText) {
+                        if (isChunked) {
+                            // For chunked notes, apply corrections to the stored corrected text
+                            allCorrectedText = applyCorrectionsToText(
+                                allCorrectedText,
+                                parsed.corrections || []
+                            );
+                        } else {
+                            // For non-chunked, use the full corrected text
+                            allCorrectedText = parsed.correctedText;
+                        }
                     }
                 } catch (e) {
                     // Continue with other chunks if one fails
@@ -350,9 +464,26 @@ ${chunkText}`;
                 }
             }
 
+            // Filter out corrections that don't exist in the original text (prevents false positives)
+            const validCorrections = allCorrections.filter(correction => {
+                const issue = correction.issue || '';
+                // Check if the issue text actually appears in the original content
+                if (issue && content.includes(issue)) {
+                    return true;
+                }
+                // Also check common variations
+                if (issue) {
+                    // Case-insensitive search
+                    const lowerContent = content.toLowerCase();
+                    const lowerIssue = issue.toLowerCase();
+                    return lowerContent.includes(lowerIssue);
+                }
+                return false;
+            });
+
             // Build combined feedback
             const combinedFeedback = JSON.stringify({
-                corrections: allCorrections,
+                corrections: validCorrections.length > 0 ? validCorrections : allCorrections, // Fall back to all if none match exactly
                 summary: isChunked
                     ? `Checked ${chunks.length} sections of the note`
                     : 'Grammar and spelling review complete',
@@ -720,6 +851,9 @@ ${chunkText}`;
                         NotesEditor.updateStatus(
                             'Changes applied. Backup saved - you can restore from backup if needed.'
                         );
+                        // Update backup button visibility to show the newly created backup
+                        // eslint-disable-next-line no-undef
+                        NotesEditor.updateBackupButtonVisibility(currentNoteId);
                     })
                     .catch(error => {
                         console.error('Error saving backup:', error);
@@ -735,16 +869,54 @@ ${chunkText}`;
     }
 
     /**
-     * Generate a simple line-by-line diff between two texts
-     * Returns HTML showing additions and deletions
+     * Simple word-level diff for better change visualization
      */
+    function getWordDiff(origLine, corrLine) {
+        const origWords = origLine.split(/(\s+|[.,!?;:-])/);
+        const corrWords = corrLine.split(/(\s+|[.,!?;:-])/);
+
+        let origHtml = '';
+        let corrHtml = '';
+        let origIdx = 0;
+        let corrIdx = 0;
+
+        while (origIdx < origWords.length || corrIdx < corrWords.length) {
+            const origWord = origIdx < origWords.length ? origWords[origIdx] : null;
+            const corrWord = corrIdx < corrWords.length ? corrWords[corrIdx] : null;
+
+            if (origWord === corrWord) {
+                // Words match
+                origHtml += Utils.sanitizeHtml(origWord || '');
+                corrHtml += Utils.sanitizeHtml(corrWord || '');
+                origIdx++;
+                corrIdx++;
+            } else if (!origWord) {
+                // Word added in corrected version
+                corrHtml += `<span style="background-color: rgba(40, 167, 69, 0.3); color: #28a745; font-weight: bold;">${Utils.sanitizeHtml(corrWord)}</span>`;
+                corrIdx++;
+            } else if (!corrWord) {
+                // Word removed
+                origHtml += `<span style="background-color: rgba(220, 53, 69, 0.3); color: #dc3545; text-decoration: line-through;">${Utils.sanitizeHtml(origWord)}</span>`;
+                origIdx++;
+            } else {
+                // Words differ - mark both as changed
+                origHtml += `<span style="background-color: rgba(220, 53, 69, 0.3); color: #dc3545; text-decoration: line-through;">${Utils.sanitizeHtml(origWord)}</span>`;
+                corrHtml += `<span style="background-color: rgba(40, 167, 69, 0.3); color: #28a745; font-weight: bold;">${Utils.sanitizeHtml(corrWord)}</span>`;
+                origIdx++;
+                corrIdx++;
+            }
+        }
+
+        return { origHtml, corrHtml };
+    }
+
     function generateDiffHtml(originalText, correctedText) {
         const originalLines = originalText.split('\n');
         const correctedLines = correctedText.split('\n');
 
-        // Simple line diff
+        // Simple line diff with word-level highlighting for similar lines
         let diffHtml =
-            '<div style="font-family: monospace; font-size: 0.9rem; line-height: 1.6; background: var(--color-background-secondary); padding: 1rem; border-radius: var(--border-radius); max-height: 400px; overflow-y: auto;">';
+            '<div style="font-family: system-ui, -apple-system, sans-serif; font-size: 0.9rem; line-height: 1.8; background: var(--color-background-secondary); padding: 1rem; border-radius: var(--border-radius); max-height: 400px; overflow-y: auto;">';
 
         let originalIdx = 0;
         let correctedIdx = 0;
@@ -761,16 +933,28 @@ ${chunkText}`;
                 correctedIdx++;
             } else if (origLine && (!corrLine || correctedIdx >= correctedLines.length)) {
                 // Line was removed
-                diffHtml += `<div style="padding: 0.25rem 0; background-color: rgba(220, 53, 69, 0.1); color: #dc3545;">- ${Utils.sanitizeHtml(origLine)}</div>`;
+                diffHtml += `<div style="padding: 0.25rem 0; background-color: rgba(220, 53, 69, 0.1);">- <span style="color: #dc3545;">${Utils.sanitizeHtml(origLine)}</span></div>`;
                 originalIdx++;
             } else if (corrLine && (!origLine || originalIdx >= originalLines.length)) {
                 // Line was added
-                diffHtml += `<div style="padding: 0.25rem 0; background-color: rgba(40, 167, 69, 0.1); color: #28a745;">+ ${Utils.sanitizeHtml(corrLine)}</div>`;
+                diffHtml += `<div style="padding: 0.25rem 0; background-color: rgba(40, 167, 69, 0.1);">+ <span style="color: #28a745;">${Utils.sanitizeHtml(corrLine)}</span></div>`;
                 correctedIdx++;
-            } else {
-                // Lines differ
-                diffHtml += `<div style="padding: 0.25rem 0; background-color: rgba(220, 53, 69, 0.1); color: #dc3545;">- ${Utils.sanitizeHtml(origLine)}</div>`;
-                diffHtml += `<div style="padding: 0.25rem 0; background-color: rgba(40, 167, 69, 0.1); color: #28a745;">+ ${Utils.sanitizeHtml(corrLine)}</div>`;
+            } else if (origLine && corrLine) {
+                // Lines differ - check if they're similar (word-level diff)
+                const similarity =
+                    origLine.split('').filter((char, i) => char === corrLine[i]).length /
+                    Math.max(origLine.length, corrLine.length);
+
+                if (similarity > 0.7) {
+                    // Lines are mostly similar - do word-level diff
+                    const { origHtml, corrHtml } = getWordDiff(origLine, corrLine);
+                    diffHtml += `<div style="padding: 0.25rem 0; background-color: rgba(220, 53, 69, 0.1);">- <span style="color: #dc3545;">${origHtml}</span></div>`;
+                    diffHtml += `<div style="padding: 0.25rem 0; background-color: rgba(40, 167, 69, 0.1);">+ <span style="color: #28a745;">${corrHtml}</span></div>`;
+                } else {
+                    // Lines are very different - show full lines
+                    diffHtml += `<div style="padding: 0.25rem 0; background-color: rgba(220, 53, 69, 0.1);">- <span style="color: #dc3545;">${Utils.sanitizeHtml(origLine)}</span></div>`;
+                    diffHtml += `<div style="padding: 0.25rem 0; background-color: rgba(40, 167, 69, 0.1);">+ <span style="color: #28a745;">${Utils.sanitizeHtml(corrLine)}</span></div>`;
+                }
                 originalIdx++;
                 correctedIdx++;
             }
