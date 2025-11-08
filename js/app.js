@@ -357,9 +357,9 @@
         const newList = {
             id: Utils.generateId(),
             name: 'New List',
-            category: '',
+            category: 'personal',
             tags: [],
-            priority: 'none',
+            priority: 'medium',
             deadline: null,
             favorite: false,
             items: [],
@@ -543,7 +543,11 @@
             return;
         }
 
-        if (!UI.confirm(`Delete "${state.currentList.name}"? This cannot be undone.`)) {
+        if (
+            !UI.confirm(
+                `Delete "${state.currentList.name}"? It will be moved to trash and recoverable for 14 days.`
+            )
+        ) {
             return;
         }
 
@@ -849,9 +853,7 @@
         UI.setButtonLoading(btn, true);
 
         try {
-            console.log('Testing API connection...');
             const result = await ClaudeAPI.testConnection(apiKey, provider, model);
-            console.log('API test result:', result);
 
             if (result.success) {
                 // Save API key to .env.local via new endpoint

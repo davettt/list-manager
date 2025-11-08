@@ -46,6 +46,9 @@ const NotesEditor = (() => {
             state.isDirty = true;
             updateStatus('Unsaved changes');
 
+            // Update character counter
+            updateCharacterCounter(textarea.value);
+
             // Debounce preview update
             clearTimeout(state.previewDebounceTimer);
             state.previewDebounceTimer = setTimeout(() => {
@@ -118,8 +121,16 @@ const NotesEditor = (() => {
             }
 
             // eslint-disable-next-line no-undef
+            if (typeof DOMPurify === 'undefined') {
+                preview.innerHTML = '<p style="color: #999;">Security library not loaded</p>';
+                return;
+            }
+
+            // eslint-disable-next-line no-undef
             const html = marked.parse(content);
-            preview.innerHTML = html;
+            // eslint-disable-next-line no-undef
+            const clean = DOMPurify.sanitize(html);
+            preview.innerHTML = clean;
 
             // Add syntax highlighting for code blocks if available
             preview.querySelectorAll('pre code').forEach(block => {
@@ -199,6 +210,91 @@ const NotesEditor = (() => {
     }
 
     /**
+     * Update character counter with soft limit warning
+     * @param {string} content - Note content
+     */
+    function updateCharacterCounter(content) {
+        const SOFT_LIMIT = 3000;
+        const counterFill = document.getElementById('character-counter-fill');
+        const counterText = document.getElementById('character-counter-text');
+
+        if (!counterFill || !counterText) {
+            return;
+        }
+
+        const charCount = content.length;
+        const percentage = Math.min((charCount / SOFT_LIMIT) * 100, 100);
+
+        // Update fill bar
+        counterFill.style.width = percentage + '%';
+
+        // Update color based on usage
+        counterFill.classList.remove('warning', 'exceeded');
+        if (charCount > SOFT_LIMIT) {
+            counterFill.classList.add('exceeded');
+        } else if (charCount > SOFT_LIMIT * 0.8) {
+            counterFill.classList.add('warning');
+        }
+
+        // Update text
+        counterText.textContent = charCount.toLocaleString() + ' / 3000';
+
+        // Show warning message if exceeded
+        if (charCount > SOFT_LIMIT) {
+            counterText.title = `Note exceeds recommended character limit of ${SOFT_LIMIT.toLocaleString()}. Using grammar check on very long notes will result in multiple API calls.`;
+        } else {
+            counterText.title = 'Character count (soft limit: 3000)';
+        }
+    }
+
+    /**
+     * Check if backup exists and update restore button visibility
+     */
+    async function updateBackupButtonVisibility(noteId) {
+        const restoreBtn = document.getElementById('note-restore-backup-btn');
+        if (!restoreBtn) {
+            return;
+        }
+
+        try {
+            // eslint-disable-next-line no-undef
+            const hasBackup = await NotesStorage.hasBackup(noteId);
+            if (hasBackup) {
+                restoreBtn.style.display = '';
+            } else {
+                restoreBtn.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error checking backup:', error);
+            restoreBtn.style.display = 'none';
+        }
+    }
+
+    /**
+     * Restore note from backup
+     */
+    async function restoreFromBackup(noteId) {
+        try {
+            // eslint-disable-next-line no-undef
+            const backup = await NotesStorage.getBackup(noteId);
+            if (backup && backup.content) {
+                const textarea = elements.textarea();
+                textarea.value = backup.content;
+                updateStatus('Restored from backup');
+
+                // Trigger input event to update preview and save
+                textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            } else {
+                updateStatus('Could not restore backup');
+            }
+        } catch (error) {
+            console.error('Error restoring backup:', error);
+            updateStatus('Error restoring backup');
+            alert('Failed to restore backup. Please check the console for more details.');
+        }
+    }
+
+    /**
      * Load note into editor
      */
     async function loadNote(noteId) {
@@ -211,7 +307,11 @@ const NotesEditor = (() => {
             elements.titleInput().value = note.title;
             elements.categorySelect().value = note.category || 'personal';
             elements.favoriteCheckbox().checked = note.favorite || false;
-            elements.textarea().value = note.content || '';
+            const content = note.content || '';
+            elements.textarea().value = content;
+
+            // Update character counter
+            updateCharacterCounter(content);
 
             // Update preview
             await updatePreview();
@@ -228,6 +328,9 @@ const NotesEditor = (() => {
             const textarea = elements.textarea();
             textarea.setSelectionRange(0, 0);
             textarea.scrollTop = 0;
+
+            // Check if backup exists and update button visibility
+            await updateBackupButtonVisibility(noteId);
         } catch (error) {
             console.error('Error loading note:', error);
             updateStatus('Error loading note');
@@ -246,8 +349,15 @@ const NotesEditor = (() => {
         elements.textarea().value = '';
         elements.preview().innerHTML = '';
         updateStatus('');
+        updateCharacterCounter('');
         elements.editorContainer().style.display = 'none';
         elements.noNoteSelected().style.display = 'flex';
+
+        // Hide restore button
+        const restoreBtn = document.getElementById('note-restore-backup-btn');
+        if (restoreBtn) {
+            restoreBtn.style.display = 'none';
+        }
     }
 
     /**
@@ -301,12 +411,35 @@ const NotesEditor = (() => {
     }
 
     /**
+     * Initialize restore backup button
+     */
+    function initializeRestoreButton() {
+        const restoreBtn = document.getElementById('note-restore-backup-btn');
+        if (!restoreBtn) {
+            return;
+        }
+
+        restoreBtn.addEventListener('click', () => {
+            if (state.currentNoteId) {
+                if (
+                    confirm(
+                        'Restore from backup? This will replace the current content with the previous version.'
+                    )
+                ) {
+                    restoreFromBackup(state.currentNoteId);
+                }
+            }
+        });
+    }
+
+    /**
      * Public API
      */
     return {
         initialize: () => {
             initializeEditorEvents();
             initializePaneToggles();
+            initializeRestoreButton();
         },
         loadNote,
         clearEditor,

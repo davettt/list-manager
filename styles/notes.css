@@ -4,6 +4,20 @@
  */
 
 /* ===================================
+   Container Height Fix for Notes View
+   =================================== */
+
+/* Ensure main container fills available height and is flex */
+main.main-content > .container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* ===================================
    Tab Navigation
    =================================== */
 
@@ -48,22 +62,45 @@
     flex-direction: column;
     flex: 1;
     height: 100%;
+    min-height: 0;
 }
 
 #notes-view {
     display: flex;
     flex-direction: column;
     height: 100%;
+    min-height: 0;
     overflow: hidden;
+    position: relative;
+}
+
+/* Remove padding when notes view is active (handled by JavaScript) */
+.main-content.notes-active {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+#notes-view {
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 #notes-view .container {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     flex: 1;
     min-height: 0;
     max-width: 100%;
-    padding: 0 1rem;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0;
+}
+
+.view-section.notes-view-with-sidebar {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    height: 100%;
 }
 
 /* ===================================
@@ -152,18 +189,259 @@
 }
 
 /* ===================================
+   Notes Sidebar
+   =================================== */
+
+.notes-sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    height: 100%;
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-bg-primary);
+    border-right: 1px solid var(--color-border);
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 50;
+    transition: transform var(--transition-fast) ease;
+    margin: 0;
+    padding: 0;
+    transform: translateX(0);
+}
+
+.notes-sidebar.collapsed {
+    transform: translateX(-100%);
+    border-right: none;
+}
+
+/* Sidebar Header */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-bottom: 1px solid var(--color-border);
+    background-color: var(--color-bg-primary);
+    flex-shrink: 0;
+}
+
+.sidebar-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.sidebar-close {
+    padding: 0.4rem;
+    color: var(--color-text-secondary);
+}
+
+.sidebar-close:hover {
+    color: var(--color-text-primary);
+}
+
+/* Sidebar Search */
+.sidebar-search {
+    position: relative;
+    border-bottom: 1px solid var(--color-border);
+    background-color: var(--color-bg-primary);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.5rem;
+}
+
+.sidebar-search input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.5rem 1.75rem 0.5rem 1.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+}
+
+.sidebar-search input::placeholder {
+    color: var(--color-text-muted);
+}
+
+.sidebar-search input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.sidebar-search .search-icon {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+    pointer-events: none;
+    flex-shrink: 0;
+}
+
+/* Categories Container */
+.notes-categories {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: var(--color-bg-primary);
+}
+
+/* Category Group */
+.category-group {
+    border-bottom: 1px solid var(--color-border);
+    background-color: var(--color-bg-primary);
+}
+
+.category-group:last-child {
+    border-bottom: none;
+}
+
+/* Category Header (Collapsible) */
+.category-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background-color: var(--color-background);
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    transition: all var(--transition-fast) ease;
+}
+
+.category-header:hover {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+}
+
+.category-header .disclosure-icon {
+    display: inline-flex;
+    font-size: 0.75rem;
+    transition: transform var(--transition-fast) ease;
+}
+
+.category-header.expanded .disclosure-icon {
+    transform: rotate(0deg);
+}
+
+.category-header.collapsed .disclosure-icon {
+    transform: rotate(-90deg);
+}
+
+/* Category Notes List */
+.category-notes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--transition-fast) ease;
+    background-color: var(--color-bg-primary);
+}
+
+.category-notes.expanded {
+    max-height: 5000px;
+}
+
+/* Note Item in Sidebar */
+.category-notes .note-item {
+    padding: 0.6rem 1rem 0.6rem 1.75rem;
+    cursor: pointer;
+    transition: all var(--transition-fast) ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: none;
+    font-size: 0.875rem;
+}
+
+.category-notes .note-item:hover {
+    background-color: var(--color-bg-tertiary);
+}
+
+.category-notes .note-item.active {
+    background-color: var(--color-primary);
+    color: white;
+}
+
+.category-notes .note-item.active .note-item-meta {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.category-notes .note-item-title {
+    font-size: 0.85rem;
+    max-width: 150px;
+}
+
+.category-notes .note-item-meta {
+    font-size: 0.65rem;
+    display: none;
+}
+
+.category-notes .note-item-favorite {
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+/* ===================================
+   Notes Editor Area (Wrapper)
+   =================================== */
+
+.notes-editor-area {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    margin: 0;
+    padding: 0;
+}
+
+/* Editor Header with Toggle Button */
+.editor-header {
+    display: flex;
+    align-items: center;
+    height: auto;
+    padding: 0.25rem 0.25rem;
+    background-color: transparent;
+    flex-shrink: 0;
+}
+
+.sidebar-toggle-btn {
+    padding: 0.5rem;
+    color: var(--color-text-secondary);
+}
+
+.sidebar-toggle-btn:hover {
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+}
+
+/* ===================================
    Notes Editor Container
    =================================== */
 
 .notes-editor-container {
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
-    background-color: var(--color-surface);
-    overflow: hidden;
     flex: 1;
     min-height: 0;
+    background-color: var(--color-surface);
+    overflow: hidden;
 }
 
 .no-note-selected {
@@ -494,6 +772,53 @@
     background-color: var(--color-surface);
     font-size: 0.85rem;
     color: var(--color-text-muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Character Counter Styles */
+.character-counter-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    max-width: 300px;
+}
+
+.character-counter-bar {
+    flex: 1;
+    height: 4px;
+    background-color: var(--color-background-secondary);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.character-counter-fill {
+    height: 100%;
+    width: 0%;
+    background-color: #4caf50;
+    transition:
+        width 0.2s ease,
+        background-color 0.2s ease;
+    border-radius: 2px;
+}
+
+.character-counter-fill.warning {
+    background-color: #ff9800;
+}
+
+.character-counter-fill.exceeded {
+    background-color: #f44336;
+}
+
+.character-counter-text {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    min-width: 80px;
+    text-align: right;
 }
 
 /* ===================================
@@ -689,19 +1014,51 @@
     }
 }
 
-@media (max-width: 768px) {
-    .notes-container {
-        gap: 0;
-    }
-
+@media (max-width: 1024px) {
     .notes-sidebar {
-        max-height: 300px;
-        border-bottom: 1px solid var(--color-border);
-        border-right: none;
+        width: 250px;
     }
 
     .editor-panes {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+    }
+
+    .editor-pane {
+        border-right: none;
+        border-bottom: 1px solid var(--color-border);
+        min-height: 300px;
+    }
+
+    .editor-pane:last-child {
+        border-bottom: none;
+    }
+}
+
+@media (max-width: 768px) {
+    #notes-view {
+        flex-direction: column;
+    }
+
+    .notes-sidebar {
+        position: absolute;
+        width: 100%;
+        height: 40%;
+        max-height: 40%;
+        border-right: none;
+        border-bottom: 1px solid var(--color-border);
+        transform: translateY(0);
+        top: 0;
+        left: 0;
+        right: 0;
+    }
+
+    .notes-sidebar.collapsed {
+        transform: translateY(-100%);
+        border-bottom: none;
+    }
+
+    .notes-editor-container {
+        flex: 1;
     }
 
     .note-metadata {
@@ -724,6 +1081,20 @@
 
     .note-preview {
         padding: 1rem;
+    }
+
+    .editor-panes {
+        flex-direction: column;
+    }
+
+    .editor-pane {
+        border-right: none;
+        border-bottom: 1px solid var(--color-border);
+        min-height: 300px;
+    }
+
+    .editor-pane:last-child {
+        border-bottom: none;
     }
 }
 

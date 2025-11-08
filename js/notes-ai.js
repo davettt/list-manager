@@ -192,6 +192,38 @@ const NotesAI = (() => {
     }
 
     /**
+     * Split note into chunks for processing long notes
+     * @param {string} content - Note content
+     * @param {number} maxChunkSize - Maximum characters per chunk
+     * @returns {Array<string>} Array of note chunks
+     */
+    function splitNoteIntoChunks(content, maxChunkSize = 3000) {
+        const chunks = [];
+        let currentChunk = '';
+
+        // Split by paragraphs (double newlines) to preserve structure
+        const paragraphs = content.split(/\n\n+/);
+
+        for (const paragraph of paragraphs) {
+            if ((currentChunk + paragraph).length > maxChunkSize && currentChunk.length > 0) {
+                // Current chunk is full, save it and start a new one
+                chunks.push(currentChunk.trim());
+                currentChunk = paragraph;
+            } else {
+                // Add paragraph to current chunk
+                currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
+            }
+        }
+
+        // Add remaining chunk
+        if (currentChunk.trim()) {
+            chunks.push(currentChunk.trim());
+        }
+
+        return chunks;
+    }
+
+    /**
      * Check grammar and spelling
      * @param {string} noteId - Note ID
      * @param {string} content - Note content
@@ -217,7 +249,40 @@ const NotesAI = (() => {
         try {
             const { provider } = await getAISettings();
 
-            const prompt = `Please review this note for grammar, spelling, and clarity issues.
+            // For long notes, use chunk-based processing
+            const chunks = content.length > 4000 ? splitNoteIntoChunks(content, 3000) : [content];
+            const isChunked = chunks.length > 1;
+
+            let allCorrections = [];
+            let allCorrectedText = content;
+
+            if (isChunked) {
+                // eslint-disable-next-line no-undef
+                NotesEditor.updateStatus(`Checking grammar (1/${chunks.length})...`);
+            }
+
+            for (let i = 0; i < chunks.length; i++) {
+                const chunkText = chunks[i];
+                const chunkNumber = i + 1;
+
+                if (isChunked) {
+                    // eslint-disable-next-line no-undef
+                    NotesEditor.updateStatus(
+                        `Checking grammar (${chunkNumber}/${chunks.length})...`
+                    );
+                }
+
+                const prompt = isChunked
+                    ? `Please review this section of a note for grammar, spelling, and clarity issues. This is section ${chunkNumber}/${chunks.length}.
+
+Return ONLY valid JSON with this structure (no markdown):
+{"corrections": [{"issue": "error description", "location": "where", "correction": "change"}], "summary": "brief"}
+
+Focus on this section only. Include ONLY real grammar/spelling errors. Keep corrections concise.
+
+SECTION:
+${chunkText}`
+                    : `Please review this note for grammar, spelling, and clarity issues.
 
 Return your response as ONLY valid JSON (no markdown, no extra text). The JSON must have this exact structure:
 {
@@ -237,19 +302,68 @@ IMPORTANT RULES:
 6. Preserve all formatting, structure, and length of the original
 
 ORIGINAL:
-${content}`;
+${chunkText}`;
 
-            const feedback = await makeProxyApiCall(prompt, provider);
+                const feedback = await makeProxyApiCall(prompt, provider);
 
-            if (!feedback || !feedback.trim()) {
-                throw new Error('No feedback generated');
+                if (!feedback || !feedback.trim()) {
+                    continue; // Skip this chunk if no feedback
+                }
+
+                // Try to extract corrections from feedback
+                try {
+                    let jsonString = feedback;
+
+                    // Method 1: Try to extract from markdown code blocks
+                    const jsonMatch = feedback.match(/```(?:json)?\s*([\s\S]*?)```/);
+                    if (jsonMatch && jsonMatch[1]) {
+                        jsonString = jsonMatch[1].trim();
+                    } else {
+                        // Method 2: If that didn't work, find first { and last }
+                        const firstBrace = feedback.indexOf('{');
+                        const lastBrace = feedback.lastIndexOf('}');
+                        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                            jsonString = feedback.substring(firstBrace, lastBrace + 1);
+                        }
+                    }
+
+                    const parsed = JSON.parse(jsonString);
+
+                    // Collect corrections
+                    if (parsed.corrections && Array.isArray(parsed.corrections)) {
+                        // Add chunk number to location if chunked
+                        if (isChunked) {
+                            parsed.corrections.forEach(c => {
+                                c.location = `Section ${chunkNumber}: ${c.location}`;
+                            });
+                        }
+                        allCorrections = allCorrections.concat(parsed.corrections);
+                    }
+
+                    // For non-chunked, use the corrected text
+                    if (!isChunked && parsed.correctedText) {
+                        allCorrectedText = parsed.correctedText;
+                    }
+                } catch (e) {
+                    // Continue with other chunks if one fails
+                    console.error(`Failed to parse chunk ${chunkNumber}:`, e.message);
+                }
             }
+
+            // Build combined feedback
+            const combinedFeedback = JSON.stringify({
+                corrections: allCorrections,
+                summary: isChunked
+                    ? `Checked ${chunks.length} sections of the note`
+                    : 'Grammar and spelling review complete',
+                correctedText: allCorrectedText
+            });
 
             // Close loading modal and show feedback
             if (loadingModal) {
                 loadingModal.remove();
             }
-            showFeedbackModal(feedback);
+            showFeedbackModal(combinedFeedback, content, isChunked);
             // eslint-disable-next-line no-undef
             NotesEditor.updateStatus('Grammar check complete');
         } catch (error) {
@@ -275,7 +389,7 @@ ${content}`;
             <div class="ai-modal-content" style="max-width: 300px;">
                 <div style="padding: 2rem; text-align: center;">
                     <div class="ai-spinner"></div>
-                    <p style="margin-top: 1rem; color: var(--color-text-primary);">${escapeHtml(message)}</p>
+                    <p style="margin-top: 1rem; color: var(--color-text-primary);">${Utils.sanitizeHtml(message)}</p>
                 </div>
             </div>
         `;
@@ -297,7 +411,7 @@ ${content}`;
                     <button class="ai-modal-close-icon" aria-label="Close">&times;</button>
                 </div>
                 <div class="ai-modal-body">
-                    <p>${escapeHtml(summary)}</p>
+                    <p>${Utils.sanitizeHtml(summary)}</p>
                 </div>
                 <div class="ai-modal-footer">
                     <button class="btn btn-secondary ai-modal-copy">Copy</button>
@@ -337,20 +451,37 @@ ${content}`;
 
     /**
      * Show feedback modal
+     * @param {string} feedback - Feedback JSON string
+     * @param {string} originalText - Original note text
+     * @param {boolean} isChunked - Whether the note was processed in chunks
      */
-    function showFeedbackModal(feedback) {
+    function showFeedbackModal(feedback, originalText, isChunked = false) {
         let correctedText = null;
         let displayHtml = '';
         let feedbackForClipboard = feedback;
         let parseError = false;
+        let currentNoteId = null;
+
+        // Get current note ID
+        // eslint-disable-next-line no-undef
+        currentNoteId = NotesEditor.getCurrentNoteId();
 
         // Try to parse as JSON
         try {
-            // Handle JSON wrapped in markdown code blocks
             let jsonString = feedback;
-            const jsonMatch = feedback.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+
+            // Method 1: Try to extract from markdown code blocks
+            const jsonMatch = feedback.match(/```(?:json)?\s*([\s\S]*?)```/);
             if (jsonMatch && jsonMatch[1]) {
                 jsonString = jsonMatch[1].trim();
+            } else {
+                // Method 2: If that didn't work, find first { and last }
+                const firstBrace = feedback.indexOf('{');
+                const lastBrace = feedback.lastIndexOf('}');
+                if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                    jsonString = feedback.substring(firstBrace, lastBrace + 1);
+                }
+                // If still no luck, just use feedback as-is and let JSON.parse fail
             }
 
             const parsed = JSON.parse(jsonString);
@@ -365,7 +496,14 @@ ${content}`;
 
             // Display summary
             if (parsed.summary) {
-                displayHtml += `<p><strong>Overall Assessment:</strong> ${escapeHtml(parsed.summary)}</p>`;
+                displayHtml += `<p><strong>Overall Assessment:</strong> ${Utils.sanitizeHtml(parsed.summary)}</p>`;
+            }
+
+            // Show message for chunked notes
+            if (isChunked) {
+                displayHtml += `<p style="background-color: var(--color-background-secondary); padding: 0.75rem; border-radius: 4px; font-size: 0.9rem; color: var(--color-text-secondary); margin: 0.75rem 0;">
+                    <strong>Note:</strong> Long notes are checked in multiple sections. Preview of changes is not available for multi-section reviews, but you can review all corrections below.
+                </p>`;
             }
 
             // Display corrections as table if any
@@ -378,9 +516,9 @@ ${content}`;
                     '<tr style="background-color: var(--color-background-secondary);"><th style="padding: 0.75rem; border: 1px solid var(--color-border-primary); text-align: left;">Issue</th><th style="padding: 0.75rem; border: 1px solid var(--color-border-primary); text-align: left;">Location</th><th style="padding: 0.75rem; border: 1px solid var(--color-border-primary); text-align: left;">Correction</th></tr>';
 
                 parsed.corrections.forEach(correction => {
-                    const issue = escapeHtml(correction.issue || '');
-                    const location = escapeHtml(correction.location || '');
-                    const correctionText = escapeHtml(correction.correction || '');
+                    const issue = Utils.sanitizeHtml(correction.issue || '');
+                    const location = Utils.sanitizeHtml(correction.location || '');
+                    const correctionText = Utils.sanitizeHtml(correction.correction || '');
                     displayHtml += `<tr><td style="padding: 0.75rem; border: 1px solid var(--color-border-primary);">${issue}</td><td style="padding: 0.75rem; border: 1px solid var(--color-border-primary);">${location}</td><td style="padding: 0.75rem; border: 1px solid var(--color-border-primary);">${correctionText}</td></tr>`;
                 });
 
@@ -405,10 +543,57 @@ ${content}`;
             }
         } catch (e) {
             // JSON parsing failed
+            console.error('JSON parse error:', e.message);
+            console.error(
+                'This is likely because your note is too long for the AI to process completely.'
+            );
             parseError = true;
-            displayHtml = `<div style="color: var(--color-text-error); padding: 1rem; background: var(--color-background-error); border-radius: var(--border-radius); margin-bottom: 1rem;">
-                <strong>Error:</strong> Failed to parse AI response. Please try the grammar check again.
-            </div>`;
+
+            // Try to salvage what we can from the incomplete JSON
+            try {
+                // Find all corrections that are complete
+                const correctionMatches = feedback.match(
+                    /"issue":\s*"([^"]+)"[\s\S]*?"location":\s*"([^"]+)"[\s\S]*?"correction":\s*"([^"]+)"/g
+                );
+
+                if (correctionMatches && correctionMatches.length > 0) {
+                    // We can extract some corrections even if JSON is incomplete
+                    displayHtml = '<div>';
+                    displayHtml +=
+                        '<p style="color: var(--color-text-secondary); font-size: 0.9rem; margin-bottom: 1rem;"><em>Note: The response was truncated. Showing partial results:</em></p>';
+                    displayHtml +=
+                        '<h3 style="margin: 1.5rem 0 0.75rem 0; color: var(--color-text-primary);">Corrections Found</h3>';
+                    displayHtml +=
+                        '<table style="width: 100%; border-collapse: collapse; margin: 1rem 0; border: 1px solid var(--color-border-primary);">';
+                    displayHtml +=
+                        '<tr style="background-color: var(--color-background-secondary);"><th style="padding: 0.75rem; border: 1px solid var(--color-border-primary); text-align: left;">Issue</th><th style="padding: 0.75rem; border: 1px solid var(--color-border-primary); text-align: left;">Location</th><th style="padding: 0.75rem; border: 1px solid var(--color-border-primary); text-align: left;">Correction</th></tr>';
+
+                    correctionMatches.forEach(match => {
+                        const issue = match.match(/"issue":\s*"([^"]+)"/)[1];
+                        const location = match.match(/"location":\s*"([^"]+)"/)[1];
+                        const correction = match.match(/"correction":\s*"([^"]+)"/)[1];
+                        displayHtml += `<tr><td style="padding: 0.75rem; border: 1px solid var(--color-border-primary);">${Utils.sanitizeHtml(issue)}</td><td style="padding: 0.75rem; border: 1px solid var(--color-border-primary);">${Utils.sanitizeHtml(location)}</td><td style="padding: 0.75rem; border: 1px solid var(--color-border-primary);">${Utils.sanitizeHtml(correction)}</td></tr>`;
+                    });
+
+                    displayHtml += '</table>';
+                    displayHtml +=
+                        '<p style="color: var(--color-text-secondary); font-size: 0.85rem; margin-top: 1rem;"><strong>Tip:</strong> Your note is too long for the AI to process fully. Try breaking it into smaller sections and checking grammar on each part separately.</p>';
+                    displayHtml += '</div>';
+                } else {
+                    throw new Error('Could not extract any corrections');
+                }
+            } catch (fallbackError) {
+                // Last resort: just show the raw feedback
+                const sanitizedFeedback = Utils.sanitizeHtml(feedback)
+                    .replace(/\\n/g, '\n')
+                    .replace(/```json\n?/g, '')
+                    .replace(/```\n?/g, '');
+                displayHtml = `<div style="padding: 1rem; background: var(--color-bg-secondary); border-radius: var(--border-radius); margin-bottom: 1rem;">
+                    <strong style="color: var(--color-text-primary);">AI Feedback (Partial):</strong>
+                    <p style="color: var(--color-text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">Note: Your note is too long. The AI response was truncated.</p>
+                    <pre style="white-space: pre-wrap; font-family: inherit; margin-top: 0.5rem; color: var(--color-text-primary);">${sanitizedFeedback}</pre>
+                </div>`;
+            }
         }
 
         const modal = document.createElement('div');
@@ -423,9 +608,11 @@ ${content}`;
                     <div style="font-size: 0.95rem;">
                         ${displayHtml}
                     </div>
+                    <div id="diff-preview-container"></div>
                 </div>
                 <div class="ai-modal-footer">
                     <button class="btn btn-secondary ai-modal-copy-feedback">Copy Feedback</button>
+                    <button class="btn btn-primary ai-modal-preview-diff">Preview Changes</button>
                     <button class="btn btn-primary ai-modal-apply">Apply Changes</button>
                     <button class="btn btn-secondary ai-modal-close">Close</button>
                 </div>
@@ -437,13 +624,22 @@ ${content}`;
         const closeIconBtn = modal.querySelector('.ai-modal-close-icon');
         const closeBtn = modal.querySelector('.ai-modal-close');
         const copyBtn = modal.querySelector('.ai-modal-copy-feedback');
+        const previewDiffBtn = modal.querySelector('.ai-modal-preview-diff');
         const applyBtn = modal.querySelector('.ai-modal-apply');
+        const diffPreviewContainer = modal.querySelector('#diff-preview-container');
 
         // Disable apply button if JSON parsing failed or no corrected text
-        if (parseError || !correctedText) {
+        if (parseError || !correctedText || isChunked) {
             applyBtn.disabled = true;
             applyBtn.style.opacity = '0.5';
-            applyBtn.title = 'Could not parse corrected text. Please try again.';
+            if (isChunked) {
+                applyBtn.title =
+                    'Automatic correction not available for multi-section notes. Please review corrections and edit manually.';
+            } else {
+                applyBtn.title = 'Could not parse corrected text. Please try again.';
+            }
+            previewDiffBtn.disabled = true;
+            previewDiffBtn.style.opacity = '0.5';
         }
 
         // Handle close buttons
@@ -454,28 +650,134 @@ ${content}`;
             closeBtn.addEventListener('click', () => modal.remove());
         }
         copyBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(feedbackForClipboard);
-            alert('Feedback copied to clipboard');
+            // Try modern Clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard
+                    .writeText(feedbackForClipboard)
+                    .then(() => {
+                        alert('Feedback copied to clipboard');
+                    })
+                    .catch(() => {
+                        copyViaFallback();
+                    });
+            } else {
+                // Fallback for HTTP or older browsers
+                copyViaFallback();
+            }
+        });
+
+        /**
+         * Fallback copy method using execCommand (works over HTTP)
+         */
+        function copyViaFallback() {
+            const textarea = document.createElement('textarea');
+            textarea.value = feedbackForClipboard;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                alert('Feedback copied to clipboard');
+            } catch (error) {
+                alert('Failed to copy. Please copy the feedback manually.');
+            }
+            document.body.removeChild(textarea);
+        }
+        previewDiffBtn.addEventListener('click', () => {
+            // Show/hide diff preview
+            if (diffPreviewContainer.innerHTML) {
+                diffPreviewContainer.innerHTML = '';
+                previewDiffBtn.textContent = 'Preview Changes';
+            } else {
+                const diffHtml = generateDiffHtml(originalText, correctedText);
+                diffPreviewContainer.innerHTML = `
+                    <div style="margin-top: 1.5rem; border-top: 1px solid var(--color-border-primary); padding-top: 1rem;">
+                        <h3 style="margin: 0 0 0.75rem 0; color: var(--color-text-primary);">Preview: What will change</h3>
+                        <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: var(--color-text-secondary);">
+                            <span style="color: #dc3545;">— Removed</span> | <span style="color: #28a745;">+ Added</span>
+                        </p>
+                        ${diffHtml}
+                    </div>
+                `;
+                previewDiffBtn.textContent = 'Hide Preview';
+            }
         });
         applyBtn.addEventListener('click', () => {
             if (correctedText) {
-                const textarea = document.getElementById('note-content-textarea');
-                textarea.value = correctedText;
-                modal.remove();
-                // Trigger input event to update preview
+                // Save backup first, then apply changes
                 // eslint-disable-next-line no-undef
-                textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                NotesStorage.saveBackup(currentNoteId, originalText)
+                    .then(() => {
+                        const textarea = document.getElementById('note-content-textarea');
+                        textarea.value = correctedText;
+                        modal.remove();
+                        // Trigger input event to update preview
+                        // eslint-disable-next-line no-undef
+                        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                        // Show confirmation message
+                        // eslint-disable-next-line no-undef
+                        NotesEditor.updateStatus(
+                            'Changes applied. Backup saved - you can restore from backup if needed.'
+                        );
+                    })
+                    .catch(error => {
+                        console.error('Error saving backup:', error);
+                        // Still apply changes even if backup fails
+                        const textarea = document.getElementById('note-content-textarea');
+                        textarea.value = correctedText;
+                        modal.remove();
+                        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                        alert('Warning: Changes applied but backup could not be saved.');
+                    });
             }
         });
     }
 
     /**
-     * Helper: Escape HTML
+     * Generate a simple line-by-line diff between two texts
+     * Returns HTML showing additions and deletions
      */
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+    function generateDiffHtml(originalText, correctedText) {
+        const originalLines = originalText.split('\n');
+        const correctedLines = correctedText.split('\n');
+
+        // Simple line diff
+        let diffHtml =
+            '<div style="font-family: monospace; font-size: 0.9rem; line-height: 1.6; background: var(--color-background-secondary); padding: 1rem; border-radius: var(--border-radius); max-height: 400px; overflow-y: auto;">';
+
+        let originalIdx = 0;
+        let correctedIdx = 0;
+
+        while (originalIdx < originalLines.length || correctedIdx < correctedLines.length) {
+            const origLine = originalIdx < originalLines.length ? originalLines[originalIdx] : null;
+            const corrLine =
+                correctedIdx < correctedLines.length ? correctedLines[correctedIdx] : null;
+
+            if (origLine === corrLine) {
+                // Lines are the same
+                diffHtml += `<div style="padding: 0.25rem 0; color: var(--color-text-secondary);">  ${Utils.sanitizeHtml(origLine)}</div>`;
+                originalIdx++;
+                correctedIdx++;
+            } else if (origLine && (!corrLine || correctedIdx >= correctedLines.length)) {
+                // Line was removed
+                diffHtml += `<div style="padding: 0.25rem 0; background-color: rgba(220, 53, 69, 0.1); color: #dc3545;">- ${Utils.sanitizeHtml(origLine)}</div>`;
+                originalIdx++;
+            } else if (corrLine && (!origLine || originalIdx >= originalLines.length)) {
+                // Line was added
+                diffHtml += `<div style="padding: 0.25rem 0; background-color: rgba(40, 167, 69, 0.1); color: #28a745;">+ ${Utils.sanitizeHtml(corrLine)}</div>`;
+                correctedIdx++;
+            } else {
+                // Lines differ
+                diffHtml += `<div style="padding: 0.25rem 0; background-color: rgba(220, 53, 69, 0.1); color: #dc3545;">- ${Utils.sanitizeHtml(origLine)}</div>`;
+                diffHtml += `<div style="padding: 0.25rem 0; background-color: rgba(40, 167, 69, 0.1); color: #28a745;">+ ${Utils.sanitizeHtml(corrLine)}</div>`;
+                originalIdx++;
+                correctedIdx++;
+            }
+        }
+
+        diffHtml += '</div>';
+        return diffHtml;
     }
 
     /**

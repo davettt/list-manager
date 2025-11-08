@@ -177,9 +177,19 @@ const Storage = (function () {
      */
     async function deleteList(id) {
         try {
-            const lists = await getLists();
-            const filtered = lists.filter(list => list.id !== id);
-            return await saveLists(filtered);
+            // Call server DELETE endpoint (moves to trash)
+            const response = await fetch(`/api/data/lists/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to delete list');
+            }
+
+            return true;
         } catch (error) {
             console.error('Error deleting list:', error);
             return false;
@@ -418,6 +428,75 @@ const Storage = (function () {
         }
     }
 
+    /**
+     * Get all trashed items
+     * @returns {Promise<Array>} Array of trashed items with time remaining
+     */
+    async function getTrash() {
+        try {
+            const response = await fetch('/api/data/trash');
+            if (!response.ok) {
+                throw new Error('Failed to fetch trash');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error getting trash:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Restore item from trash
+     * @param {string} type - 'list' or 'note'
+     * @param {string} id - Item ID
+     * @returns {Promise<boolean>} Success status
+     */
+    async function restoreFromTrash(type, id) {
+        try {
+            const response = await fetch(`/api/data/trash/${type}/${id}/restore`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to restore from trash');
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error restoring from trash:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Permanently delete item from trash
+     * @param {string} type - 'list' or 'note'
+     * @param {string} id - Item ID
+     * @returns {Promise<boolean>} Success status
+     */
+    async function permanentlyDeleteFromTrash(type, id) {
+        try {
+            const response = await fetch(`/api/data/trash/${type}/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to permanently delete from trash');
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error permanently deleting from trash:', error);
+            return false;
+        }
+    }
+
     // Expose public API
     return {
         initStorage,
@@ -436,7 +515,10 @@ const Storage = (function () {
         exportData,
         importData,
         clearAllData,
-        getStorageInfo
+        getStorageInfo,
+        getTrash,
+        restoreFromTrash,
+        permanentlyDeleteFromTrash
     };
 })();
 

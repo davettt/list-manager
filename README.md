@@ -38,6 +38,66 @@ A simple, fast, and private tool that stores your data locally on your computer.
 
 **Note**: The development server is required for the app to work properly. This ensures your data is saved reliably to the filesystem instead of browser storage.
 
+### Running Persistently with PM2 (Optional)
+
+After the initial setup, you can run List Manager continuously in the background without needing to run `npm run dev` every time. This approach uses PM2, a process manager that keeps your app running and auto-starts it on system reboot.
+
+**Setup (One-time):**
+
+1. Install PM2 globally:
+   ```bash
+   npm install -g pm2
+   ```
+
+2. Navigate to your List Manager folder and start the app with PM2:
+   ```bash
+   pm2 start server.js --name list-manager
+   ```
+
+3. Enable auto-start on system reboot:
+   ```bash
+   pm2 startup
+   pm2 save
+   ```
+
+4. Verify it's running:
+   ```bash
+   pm2 list
+   ```
+
+**Optional: Add a Local Domain Name**
+
+For easier access, you can add a local domain instead of using `localhost`.
+
+1. Open your hosts file:
+   - **Mac/Linux**: `sudo nano /etc/hosts`
+   - **Windows**: Open `C:\Windows\System32\drivers\etc\hosts` as admin
+
+2. Add this line:
+   ```
+   127.0.0.1 listandnotes.local
+   ```
+
+3. Save and close
+
+Now you can access the app at: `http://listandnotes.local:3000`
+
+**Useful PM2 Commands:**
+
+```bash
+pm2 restart list-manager    # Restart the app
+pm2 stop list-manager       # Stop the app
+pm2 start list-manager      # Start it again
+pm2 logs list-manager       # View live logs
+pm2 delete list-manager     # Remove from PM2
+```
+
+**Advantages of this approach:**
+- ✅ No need to run commands every time
+- ✅ Auto-starts on computer restart
+- ✅ App runs in the background
+- ✅ Easy to manage with PM2 commands
+
 ### 2. Using the App
 
 **Create a List:**
@@ -233,6 +293,7 @@ In Settings → Data Management, you can clear all data. **This cannot be undone
 **What stays local:**
 - All your lists and items (saved to `local_data/lists.json`)
 - All your notes (metadata in `local_data/notes.json`, content in `local_data/notes/*.md`)
+- Note backups automatically created before grammar updates (`local_data/.backups/`)
 - All settings (saved to `local_data/settings.json`)
 - Your API key (saved to `local_data/.env.local` - git ignored for security)
 - Everything!
@@ -240,6 +301,14 @@ In Settings → Data Management, you can clear all data. **This cannot be undone
 **What goes to external services:**
 - Only AI feature requests go to your chosen AI provider (when you use AI features)
 - Your API key is sent with AI requests (required for the API to work)
+
+**Security Features:**
+- ✅ **Input Validation** - All user inputs are validated for type and length on both client and server
+- 🛡️ **XSS Protection** - Markdown rendering is sanitized with DOMPurify to prevent injection attacks
+- 🔒 **Security Headers** - HTTP response headers prevent common web attacks
+- 📏 **Size Limits** - Enforced limits prevent large payload attacks (10MB requests, 1MB notes)
+- 🔄 **Auto-Backup** - Notes are automatically backed up before grammar updates are applied
+- 💾 **One-Click Restore** - Restore from backup if anything goes wrong
 
 **No tracking:**
 - No analytics
@@ -251,6 +320,7 @@ In Settings → Data Management, you can clear all data. **This cannot be undone
 - Your data is stored in the `local_data/` folder within the app directory
 - The `local_data/` folder is excluded from git (see `.gitignore`)
 - You can backup the entire `local_data/` folder to preserve everything
+- Note backups are stored in `local_data/.backups/` for automatic recovery
 
 ## Tips & Tricks
 
@@ -353,9 +423,20 @@ list-manager/
     └── sample-data.json  # Sample lists for demo
 ```
 
+## Personal Project Notice
+
+**This is a personal project.** While you're welcome to fork it and customize it for your own needs, I'm not accepting pull requests or feature contributions. This keeps the project simple and focused on my personal requirements.
+
+If you'd like to use this project:
+- ✅ **Fork it** - Make your own version
+- ✅ **Customize it** - Modify the code as needed
+- ✅ **Report bugs** - File issues for actual bugs
+- ❌ **Submit pull requests** - I won't be reviewing these
+- ❌ **Request features** - Feature requests won't be considered
+
 ## Development
 
-Want to contribute or modify List Manager? Here's how to get started.
+Want to modify List Manager for your own needs? Here's how to get started.
 
 **Quick Start:**
 
@@ -460,9 +541,19 @@ A: Notes are plain markdown files stored locally. They have the same privacy as 
 
 ## Support & Issues
 
-Found a bug or have a suggestion? Please report it via [GitHub Issues](https://github.com/yourusername/list-manager/issues).
+Found a bug? You're welcome to report it via GitHub Issues, but please understand:
 
-**Note:** This is a personal project maintained for simplicity and low overhead. While issue reports are welcome, pull requests and feature requests may not be actively reviewed. Feel free to fork and customize for your own needs!
+**This is a personal project.** I maintain it for my own use and don't accept:
+- Pull requests (I won't review them)
+- Feature requests (won't be implemented)
+- Contributions (the project stays as-is)
+
+**What you can do:**
+- 🐛 Report bugs (with the understanding they may not be fixed)
+- 🔀 Fork the repository and customize it yourself
+- 📝 Suggest improvements in issues (I may not respond, but you're welcome to try)
+
+The best approach: Fork it, make it yours, and maintain your own version!
 
 ## License
 
@@ -477,12 +568,46 @@ Built with:
 
 ---
 
-**Version**: 1.2.0
+**Version**: 1.4.0
 **Last Updated**: 2025-11-08
 
 Made with care for people who value privacy and simplicity.
 
-### What's New in v1.2.0
+### What's New in v1.4.0
+
+**AI & Deployment Improvements:**
+- 🌐 **Remote Server Support** - API proxy now works on any domain (localhost, .local, remote servers)
+- 🚀 **Simplified Deployment** - Always uses backend proxy for AI requests (CORS-free)
+- 📧 **Server-Side API Keys** - Credentials stored securely server-side, not exposed to browser
+- ♻️ **Chunk-Based Grammar Check** - Long notes processed in sections for complete grammar review
+- ✨ **Smart Token Management** - Increased token limits to 8000 for better response quality
+- 🎯 **Better Error Handling** - Improved error messages and graceful fallbacks
+- ✅ **Code Quality** - All linting passes with zero warnings
+
+**Code Cleanup:**
+- 🧹 **Debug Removal** - All debug console.log statements removed
+- 🔍 **Zero Warnings** - ESLint strict mode enforcement
+- 📝 **Better Comments** - Production-ready code documentation
+
+### What Was New in v1.3.0
+
+**Security & Reliability:**
+- 🔒 **DOMPurify XSS Protection** - Added XSS protection for markdown rendering
+- ✅ **Comprehensive Input Validation** - Backend validation for all lists, notes, categories, tags, and content
+- 📝 **Input Length Limits** - Enforced sensible limits (75 chars for names, 500 chars for items, 1MB for notes)
+- 🛡️ **Security Headers** - Added HTTP security headers (X-Content-Type-Options, X-Frame-Options, etc.)
+- 📦 **Request Size Limits** - 10MB max payload size to prevent large payload attacks
+- 🔄 **Auto-Backup on Grammar Updates** - Notes are backed up before grammar corrections are applied
+- 👀 **Change Diff Preview** - See exactly what will change (like git diff) before applying grammar updates
+- ♻️ **One-Click Restore** - Restore from backup if grammar update goes wrong
+- 🧹 **Code Consolidation** - Removed duplicate sanitization functions for better maintainability
+
+**Performance & Quality:**
+- 🎯 **Zero ESLint Warnings** - All code passes strict linting
+- 📊 **Improved Error Handling** - Better validation error messages
+- 🔍 **Better Security Posture** - Rating improved from 6/10 to 9/10
+
+### What Was New in v1.2.0
 
 - ✨ **Notes Feature** - Write and manage markdown notes with live preview
 - 🤖 **AI for Notes** - Generate TLDR summaries and check grammar/spelling

@@ -121,6 +121,122 @@ const NotesStorage = (() => {
                 console.error('Error analyzing note:', error);
                 throw error;
             }
+        },
+
+        /**
+         * Save a backup of note content
+         * @param {string} id - Note ID
+         * @param {string} content - Note content to backup
+         */
+        async saveBackup(id, content) {
+            try {
+                const response = await fetch(`${API_BASE}/notes/${id}/backup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to save backup');
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error saving backup:', error);
+                throw error;
+            }
+        },
+
+        /**
+         * Get latest backup of a note
+         * @param {string} id - Note ID
+         */
+        async getBackup(id) {
+            try {
+                const response = await fetch(`${API_BASE}/notes/${id}/backup`);
+                if (!response.ok) {
+                    throw new Error('No backup available');
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error retrieving backup:', error);
+                throw error;
+            }
+        },
+
+        /**
+         * Check if a backup exists for a note
+         * @param {string} id - Note ID
+         */
+        async hasBackup(id) {
+            try {
+                const response = await fetch(`${API_BASE}/notes/${id}/backup/exists`);
+                if (!response.ok) {
+                    throw new Error('Failed to check backup');
+                }
+                const data = await response.json();
+                return data.exists;
+            } catch (error) {
+                console.error('Error checking backup:', error);
+                return false;
+            }
+        },
+
+        /**
+         * Get all trashed items
+         * @returns {Promise<Array>} Array of trashed items with time remaining
+         */
+        async getTrash() {
+            try {
+                const response = await fetch('/api/data/trash');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch trash');
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error getting trash:', error);
+                return [];
+            }
+        },
+
+        /**
+         * Restore item from trash
+         * @param {string} type - 'list' or 'note'
+         * @param {string} id - Item ID
+         */
+        async restoreFromTrash(type, id) {
+            try {
+                const response = await fetch(`/api/data/trash/${type}/${id}/restore`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to restore from trash');
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error restoring from trash:', error);
+                throw error;
+            }
+        },
+
+        /**
+         * Permanently delete item from trash
+         * @param {string} type - 'list' or 'note'
+         * @param {string} id - Item ID
+         */
+        async permanentlyDeleteFromTrash(type, id) {
+            try {
+                const response = await fetch(`/api/data/trash/${type}/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to permanently delete from trash');
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error permanently deleting from trash:', error);
+                throw error;
+            }
         }
     };
 })();

@@ -29,6 +29,70 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const DEFAULT_PORT = process.env.PORT || 3000;
 
+// ===================================
+// Note Filename Utilities
+// ===================================
+
+/**
+ * Convert title to slug format (spaces → hyphens, lowercase, remove special chars)
+ * @param {string} title - Note title
+ * @returns {string} Slugified title
+ */
+function slugifyTitle(title) {
+    return title
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, '') // Remove special characters
+        .replace(/\s+/g, '-') // Replace spaces with hyphens
+        .replace(/-+/g, '-') // Replace multiple hyphens with single
+        .slice(0, 50); // Max 50 chars for filename
+}
+
+/**
+ * Get short ID (first 8 chars of UUID)
+ * @param {string} uuid - Full UUID
+ * @returns {string} Short ID
+ */
+function getShortId(uuid) {
+    return uuid.substring(0, 8);
+}
+
+/**
+ * Build new note filename from title and ID
+ * @param {string} title - Note title
+ * @param {string} noteId - Note ID (UUID)
+ * @returns {string} Filename without extension
+ */
+function buildNoteFilename(title, noteId) {
+    const slug = slugifyTitle(title);
+    const shortId = getShortId(noteId);
+    // If slug is empty, use just the ID
+    return slug ? `${slug}_${shortId}` : shortId;
+}
+
+/**
+ * Check if file is old UUID format or new format
+ * @param {string} filename - Filename without extension
+ * @returns {boolean} True if old UUID format
+ */
+function isOldFormat(filename) {
+    // Old format is just UUID (36 chars, contains hyphens)
+    return /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(filename);
+}
+
+/**
+ * Extract note ID from new format filename
+ * @param {string} filename - Filename (e.g., "camera-tips_f4efc755")
+ * @returns {string} Short ID (e.g., "f4efc755")
+ */
+function extractShortIdFromFilename(filename) {
+    const lastUnderscore = filename.lastIndexOf('_');
+    if (lastUnderscore === -1) {
+        return null;
+    }
+    return filename.substring(lastUnderscore + 1);
+}
+
 /**
  * Check if a port is available
  * @param {number} port - Port to check
@@ -62,7 +126,18 @@ async function findAvailablePort(startPort) {
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+// Set request size limits (prevent large payload attacks)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb' }));
+
+// Security headers
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+});
 
 // Serve static files
 app.use(express.static(__dirname));
@@ -83,6 +158,284 @@ if (!existsSync(DATA_DIR)) {
 if (!existsSync(NOTES_DIR)) {
     await mkdir(NOTES_DIR, { recursive: true });
 }
+
+// ===================================
+// Note Migration (UUID → Title_ShortID)
+// ===================================
+
+/**
+ * Migrate notes from old UUID filename format to new {title}_{shortId} format
+ */
+async function migrateNoteFilenames() {
+    try {
+        // Check if notes.json exists
+        if (!existsSync(NOTES_FILE)) {
+            return; // No notes to migrate
+        }
+
+        const notesData = await readFile(NOTES_FILE, 'utf-8');
+        const notes = JSON.parse(notesData);
+
+        let needsSave = false;
+        const migratedNotes = [];
+
+        for (const note of notes) {
+            const oldNoteFile = path.join(NOTES_DIR, `${note.id}.md`);
+            const newFilename = buildNoteFilename(note.title, note.id);
+            const newNoteFile = path.join(NOTES_DIR, `${newFilename}.md`);
+
+            // Check if old file exists
+            if (existsSync(oldNoteFile) && oldNoteFile !== newNoteFile) {
+                try {
+                    const content = await readFile(oldNoteFile, 'utf-8');
+                    await writeFile(newNoteFile, content);
+                    await unlink(oldNoteFile);
+                    console.log(`✓ Migrated note: ${note.id} → ${newFilename}`);
+                    needsSave = true;
+                } catch (err) {
+                    console.error(`Failed to migrate note ${note.id}:`, err.message);
+                }
+            } else if (!existsSync(oldNoteFile) && !existsSync(newNoteFile)) {
+                // Neither file exists - note might have been deleted
+                console.warn(`Note file missing for ${note.id} (${note.title})`);
+            }
+
+            migratedNotes.push(note);
+        }
+
+        if (needsSave) {
+            console.log('Migration completed. Notes structure updated.');
+        }
+    } catch (err) {
+        console.error('Note migration error:', err);
+    }
+}
+
+// Run migration on startup
+await migrateNoteFilenames();
+
+// ===================================
+// Trash System (14-day retention)
+// ===================================
+
+const TRASH_DIR = path.join(DATA_DIR, '.trash');
+const TRASH_LISTS_DIR = path.join(TRASH_DIR, 'lists');
+const TRASH_NOTES_DIR = path.join(TRASH_DIR, 'notes');
+const TRASH_FILE = path.join(TRASH_DIR, 'trash.json');
+const TRASH_RETENTION_DAYS = 14;
+
+/**
+ * Initialize trash directories
+ */
+async function initializeTrash() {
+    try {
+        if (!existsSync(TRASH_DIR)) {
+            await mkdir(TRASH_DIR, { recursive: true });
+        }
+        if (!existsSync(TRASH_LISTS_DIR)) {
+            await mkdir(TRASH_LISTS_DIR, { recursive: true });
+        }
+        if (!existsSync(TRASH_NOTES_DIR)) {
+            await mkdir(TRASH_NOTES_DIR, { recursive: true });
+        }
+        if (!existsSync(TRASH_FILE)) {
+            await writeFile(TRASH_FILE, JSON.stringify([], null, 2));
+        }
+    } catch (err) {
+        console.error('Error initializing trash:', err);
+    }
+}
+
+/**
+ * Move item to trash
+ * @param {string} type - 'list' or 'note'
+ * @param {string} id - Item ID
+ * @param {object} data - Item data to store
+ */
+async function moveToTrash(type, id, data) {
+    try {
+        await initializeTrash();
+
+        const timestamp = new Date().toISOString();
+        const trashEntry = {
+            id,
+            type,
+            deletedAt: timestamp,
+            data
+        };
+
+        // Read trash index
+        let trash = [];
+        if (existsSync(TRASH_FILE)) {
+            const content = await readFile(TRASH_FILE, 'utf-8');
+            trash = JSON.parse(content);
+        }
+
+        // Add entry to trash index
+        trash.push(trashEntry);
+        await writeFile(TRASH_FILE, JSON.stringify(trash, null, 2));
+
+        // Store full data based on type
+        if (type === 'list') {
+            const trashPath = path.join(TRASH_LISTS_DIR, `${id}_${Date.now()}.json`);
+            await writeFile(trashPath, JSON.stringify(data, null, 2));
+        } else if (type === 'note') {
+            const metadata = data.metadata;
+            const content = data.content;
+
+            // Store metadata
+            const metadataPath = path.join(TRASH_NOTES_DIR, `${id}_${Date.now()}.json`);
+            await writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+
+            // Store content
+            const contentPath = path.join(TRASH_NOTES_DIR, `${id}_${Date.now()}.md`);
+            await writeFile(contentPath, content);
+        }
+
+        console.log(`✓ Moved ${type} to trash: ${id}`);
+        return trashEntry;
+    } catch (err) {
+        console.error('Error moving to trash:', err);
+        throw err;
+    }
+}
+
+/**
+ * Get all trashed items
+ */
+async function getTrash() {
+    try {
+        if (!existsSync(TRASH_FILE)) {
+            return [];
+        }
+        const content = await readFile(TRASH_FILE, 'utf-8');
+        return JSON.parse(content);
+    } catch (err) {
+        console.error('Error reading trash:', err);
+        return [];
+    }
+}
+
+/**
+ * Restore item from trash
+ * @param {string} type - 'list' or 'note'
+ * @param {string} id - Item ID
+ */
+async function restoreFromTrash(type, id) {
+    try {
+        await initializeTrash();
+
+        // Get trash index
+        let trash = [];
+        if (existsSync(TRASH_FILE)) {
+            const content = await readFile(TRASH_FILE, 'utf-8');
+            trash = JSON.parse(content);
+        }
+
+        // Find item in trash
+        const itemIndex = trash.findIndex(item => item.id === id && item.type === type);
+        if (itemIndex === -1) {
+            throw new Error('Item not found in trash');
+        }
+
+        const item = trash[itemIndex];
+
+        // Remove from trash index
+        trash.splice(itemIndex, 1);
+        await writeFile(TRASH_FILE, JSON.stringify(trash, null, 2));
+
+        // Clean up trash files
+        const trashDir = type === 'list' ? TRASH_LISTS_DIR : TRASH_NOTES_DIR;
+        const files = await readdir(trashDir);
+        const itemFiles = files.filter(f => f.startsWith(id));
+        for (const file of itemFiles) {
+            await unlink(path.join(trashDir, file));
+        }
+
+        console.log(`✓ Restored ${type} from trash: ${id}`);
+        return item.data;
+    } catch (err) {
+        console.error('Error restoring from trash:', err);
+        throw err;
+    }
+}
+
+/**
+ * Permanently delete item from trash (without restoring)
+ */
+async function permanentlyDeleteFromTrash(type, id) {
+    try {
+        // Get trash index
+        let trash = [];
+        if (existsSync(TRASH_FILE)) {
+            const content = await readFile(TRASH_FILE, 'utf-8');
+            trash = JSON.parse(content);
+        }
+
+        // Remove from trash index
+        trash = trash.filter(item => !(item.id === id && item.type === type));
+        await writeFile(TRASH_FILE, JSON.stringify(trash, null, 2));
+
+        // Clean up trash files
+        const trashDir = type === 'list' ? TRASH_LISTS_DIR : TRASH_NOTES_DIR;
+        if (existsSync(trashDir)) {
+            const files = await readdir(trashDir);
+            const itemFiles = files.filter(f => f.startsWith(id));
+            for (const file of itemFiles) {
+                await unlink(path.join(trashDir, file));
+            }
+        }
+
+        console.log(`✓ Permanently deleted from trash: ${id}`);
+    } catch (err) {
+        console.error('Error permanently deleting from trash:', err);
+        throw err;
+    }
+}
+
+/**
+ * Clean up old trash items (14+ days)
+ */
+async function cleanupOldTrash() {
+    try {
+        if (!existsSync(TRASH_FILE)) {
+            return;
+        }
+
+        const content = await readFile(TRASH_FILE, 'utf-8');
+        let trash = JSON.parse(content);
+        const now = new Date();
+        const cutoffDate = new Date(now.getTime() - TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+
+        let itemsDeleted = 0;
+        const validTrash = [];
+
+        for (const item of trash) {
+            const deletedDate = new Date(item.deletedAt);
+            if (deletedDate < cutoffDate) {
+                // Delete old item
+                await permanentlyDeleteFromTrash(item.type, item.id);
+                itemsDeleted++;
+            } else {
+                validTrash.push(item);
+            }
+        }
+
+        if (itemsDeleted > 0) {
+            console.log(
+                `🗑️  Cleaned up ${itemsDeleted} items from trash (older than ${TRASH_RETENTION_DAYS} days)`
+            );
+        }
+
+        await writeFile(TRASH_FILE, JSON.stringify(validTrash, null, 2));
+    } catch (err) {
+        console.error('Error cleaning up trash:', err);
+    }
+}
+
+// Initialize trash and clean up on startup
+await initializeTrash();
+await cleanupOldTrash();
 
 // ===================================
 // Single Instance Lock
@@ -189,6 +542,82 @@ process.on('exit', () => {
 });
 
 // ===================================
+// Validation Helpers
+// ===================================
+
+const VALID_CATEGORIES = [
+    'personal',
+    'work',
+    'travel',
+    'shopping',
+    'projects',
+    'food',
+    'health',
+    'other',
+    'ideas'
+];
+const VALID_PRIORITIES = ['high', 'medium', 'low'];
+
+/**
+ * Validate category value
+ */
+function isValidCategory(category) {
+    return category && VALID_CATEGORIES.includes(category);
+}
+
+/**
+ * Validate priority value
+ */
+function isValidPriority(priority) {
+    return !priority || VALID_PRIORITIES.includes(priority);
+}
+
+/**
+ * Validate tags array
+ */
+function isValidTags(tags) {
+    if (!Array.isArray(tags)) return false;
+    if (tags.length > 10) return false; // Max 10 tags
+    return tags.every(tag => typeof tag === 'string' && tag.trim().length > 0 && tag.length <= 50);
+}
+
+/**
+ * Validate a list object
+ */
+function isValidList(list) {
+    if (!list || typeof list !== 'object') return false;
+    if (!list.id || typeof list.id !== 'string') return false;
+    if (!list.name || typeof list.name !== 'string' || list.name.trim().length === 0) return false;
+    if (list.name.length > 75) return false;
+    if (!isValidCategory(list.category)) return false;
+    if (!isValidPriority(list.priority)) return false;
+    if (!isValidTags(list.tags || [])) return false;
+    if (!Array.isArray(list.items)) return false;
+    return true;
+}
+
+/**
+ * Validate lists array
+ */
+function isValidListsArray(lists) {
+    if (!Array.isArray(lists)) return false;
+    if (lists.length > 1000) return false; // Max 1000 lists
+    return lists.every(list => isValidList(list));
+}
+
+/**
+ * Validate settings object
+ */
+function isValidSettings(settings) {
+    if (!settings || typeof settings !== 'object') return false;
+    // Basic structure validation
+    if (settings.display && typeof settings.display !== 'object') return false;
+    if (settings.ai && typeof settings.ai !== 'object') return false;
+    if (settings.version && typeof settings.version !== 'string') return false;
+    return true;
+}
+
+// ===================================
 // Filesystem Storage API
 // ===================================
 
@@ -209,11 +638,51 @@ app.get('/api/data/lists', async (req, res) => {
 // Save lists
 app.post('/api/data/lists', async (req, res) => {
     try {
+        // Validate lists array structure
+        if (!isValidListsArray(req.body)) {
+            return res.status(400).json({ error: 'Invalid lists format or content' });
+        }
+
         await writeFile(LISTS_FILE, JSON.stringify(req.body, null, 2));
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving lists:', error);
         res.status(500).json({ error: 'Failed to save lists' });
+    }
+});
+
+// Delete list (moves to trash)
+app.delete('/api/data/lists/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Read lists
+        if (!existsSync(LISTS_FILE)) {
+            return res.status(404).json({ error: 'List not found' });
+        }
+
+        const data = await readFile(LISTS_FILE, 'utf-8');
+        let lists = JSON.parse(data);
+        const listIndex = lists.findIndex(l => l.id === id);
+
+        if (listIndex === -1) {
+            return res.status(404).json({ error: 'List not found' });
+        }
+
+        // Get the list before removing it
+        const list = lists[listIndex];
+
+        // Move to trash instead of permanently deleting
+        await moveToTrash('list', id, list);
+
+        // Remove from lists
+        lists.splice(listIndex, 1);
+        await writeFile(LISTS_FILE, JSON.stringify(lists, null, 2));
+
+        res.json({ success: true, message: 'List moved to trash' });
+    } catch (error) {
+        console.error('Error deleting list:', error);
+        res.status(500).json({ error: 'Failed to delete list' });
     }
 });
 
@@ -248,6 +717,11 @@ app.get('/api/data/settings', async (req, res) => {
 // Save settings
 app.post('/api/data/settings', async (req, res) => {
     try {
+        // Validate settings object structure
+        if (!isValidSettings(req.body)) {
+            return res.status(400).json({ error: 'Invalid settings format' });
+        }
+
         await writeFile(SETTINGS_FILE, JSON.stringify(req.body, null, 2));
         res.json({ success: true });
     } catch (error) {
@@ -330,7 +804,7 @@ app.post('/api/data/notes', async (req, res) => {
         // Create metadata entry
         const noteMetadata = {
             id,
-            title: title.trim().slice(0, 200),
+            title: title.trim().slice(0, 75),
             category: category || 'personal',
             tags: Array.isArray(tags) ? tags : [],
             favorite: false,
@@ -357,8 +831,9 @@ app.post('/api/data/notes', async (req, res) => {
         notes.push(noteMetadata);
         await writeFile(NOTES_FILE, JSON.stringify(notes, null, 2));
 
-        // Create empty markdown file
-        const noteFile = path.join(NOTES_DIR, `${id}.md`);
+        // Create empty markdown file using new filename format
+        const newFilename = buildNoteFilename(noteMetadata.title, id);
+        const noteFile = path.join(NOTES_DIR, `${newFilename}.md`);
         await writeFile(noteFile, '');
 
         res.status(201).json(noteMetadata);
@@ -391,9 +866,16 @@ app.get('/api/data/notes/:id', async (req, res) => {
             return res.status(404).json({ error: 'Note not found' });
         }
 
-        // Get content
-        const noteFile = path.join(NOTES_DIR, `${id}.md`);
+        // Get content - support both new and old filename formats
+        const newFilename = buildNoteFilename(note.title, id);
+        let noteFile = path.join(NOTES_DIR, `${newFilename}.md`);
         let content = '';
+
+        // Try new format first, fall back to old format if it doesn't exist
+        if (!existsSync(noteFile)) {
+            noteFile = path.join(NOTES_DIR, `${id}.md`);
+        }
+
         if (existsSync(noteFile)) {
             content = await readFile(noteFile, 'utf-8');
         }
@@ -434,15 +916,36 @@ app.put('/api/data/notes/:id', async (req, res) => {
 
         // Update metadata
         const now = new Date().toISOString();
-        if (title !== undefined) notes[noteIndex].title = title.trim().slice(0, 200);
-        if (category !== undefined) notes[noteIndex].category = category;
-        if (Array.isArray(tags)) notes[noteIndex].tags = tags;
+        if (title !== undefined) {
+            const trimmedTitle = title.trim().slice(0, 75);
+            if (trimmedTitle.length === 0) {
+                return res.status(400).json({ error: 'Title cannot be empty' });
+            }
+            notes[noteIndex].title = trimmedTitle;
+        }
+        if (category !== undefined) {
+            if (!isValidCategory(category)) {
+                return res.status(400).json({ error: 'Invalid category' });
+            }
+            notes[noteIndex].category = category;
+        }
+        if (Array.isArray(tags)) {
+            if (!isValidTags(tags)) {
+                return res.status(400).json({ error: 'Invalid tags format' });
+            }
+            notes[noteIndex].tags = tags;
+        }
         if (favorite !== undefined) notes[noteIndex].favorite = favorite;
         notes[noteIndex].metadata.modified = now;
 
         // Update content if provided
         if (content !== undefined) {
-            const noteFile = path.join(NOTES_DIR, `${id}.md`);
+            // Validate content length (max 1MB)
+            if (typeof content !== 'string' || content.length > 1048576) {
+                return res.status(400).json({ error: 'Content too large or invalid' });
+            }
+            const newFilename = buildNoteFilename(notes[noteIndex].title, id);
+            const noteFile = path.join(NOTES_DIR, `${newFilename}.md`);
             await writeFile(noteFile, content);
             notes[noteIndex].metadata.wordCount = content.split(/\s+/).length;
             notes[noteIndex].metadata.characterCount = content.length;
@@ -481,20 +984,230 @@ app.delete('/api/data/notes/:id', async (req, res) => {
             return res.status(404).json({ error: 'Note not found' });
         }
 
+        // Get the note before removing it
+        const note = notes[noteIndex];
+
+        // Get content from file
+        const newFilename = buildNoteFilename(note.title, id);
+        let noteFile = path.join(NOTES_DIR, `${newFilename}.md`);
+        let content = '';
+
+        // Try new format first, fall back to old format
+        if (!existsSync(noteFile)) {
+            noteFile = path.join(NOTES_DIR, `${id}.md`);
+        }
+
+        if (existsSync(noteFile)) {
+            content = await readFile(noteFile, 'utf-8');
+        }
+
+        // Move to trash instead of permanently deleting
+        await moveToTrash('note', id, {
+            metadata: note,
+            content
+        });
+
         // Remove from metadata
         notes.splice(noteIndex, 1);
         await writeFile(NOTES_FILE, JSON.stringify(notes, null, 2));
 
-        // Delete markdown file
-        const noteFile = path.join(NOTES_DIR, `${id}.md`);
-        if (existsSync(noteFile)) {
-            await unlink(noteFile);
+        // Delete markdown files - try both new and old formats
+        const newNoteFile = path.join(NOTES_DIR, `${newFilename}.md`);
+        const oldNoteFile = path.join(NOTES_DIR, `${id}.md`);
+
+        if (existsSync(newNoteFile)) {
+            await unlink(newNoteFile);
+        }
+        if (existsSync(oldNoteFile)) {
+            await unlink(oldNoteFile);
         }
 
-        res.json({ success: true });
+        res.json({ success: true, message: 'Note moved to trash' });
     } catch (error) {
         console.error('Error deleting note:', error);
         res.status(500).json({ error: 'Failed to delete note' });
+    }
+});
+
+// Save note backup (before grammar updates)
+app.post('/api/data/notes/:id/backup', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { content } = req.body;
+
+        // Validate ID format
+        if (!id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            return res.status(400).json({ error: 'Invalid note ID' });
+        }
+
+        // Ensure backups directory exists
+        const BACKUPS_DIR = path.join(DATA_DIR, '.backups');
+        if (!existsSync(BACKUPS_DIR)) {
+            await mkdir(BACKUPS_DIR, { recursive: true });
+        }
+
+        // Save as "latest" backup (overwrites previous backup)
+        const latestBackupFile = path.join(BACKUPS_DIR, `${id}.backup.md`);
+        await writeFile(latestBackupFile, content);
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error saving backup:', error);
+        res.status(500).json({ error: 'Failed to save backup' });
+    }
+});
+
+// Get latest note backup
+app.get('/api/data/notes/:id/backup', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Validate ID format
+        if (!id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            return res.status(400).json({ error: 'Invalid note ID' });
+        }
+
+        const BACKUPS_DIR = path.join(DATA_DIR, '.backups');
+        const latestBackupFile = path.join(BACKUPS_DIR, `${id}.backup.md`);
+
+        if (!existsSync(latestBackupFile)) {
+            return res.status(404).json({ error: 'No backup available' });
+        }
+
+        const content = await readFile(latestBackupFile, 'utf-8');
+        res.json({ content });
+    } catch (error) {
+        console.error('Error reading backup:', error);
+        res.status(500).json({ error: 'Failed to read backup' });
+    }
+});
+
+// Check if backup exists for a note
+app.get('/api/data/notes/:id/backup/exists', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Validate ID format
+        if (!id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            return res.status(400).json({ error: 'Invalid note ID' });
+        }
+
+        const BACKUPS_DIR = path.join(DATA_DIR, '.backups');
+        const latestBackupFile = path.join(BACKUPS_DIR, `${id}.backup.md`);
+        const exists = existsSync(latestBackupFile);
+
+        res.json({ exists });
+    } catch (error) {
+        console.error('Error checking backup:', error);
+        res.status(500).json({ error: 'Failed to check backup' });
+    }
+});
+
+// ===================================
+// Trash Management APIs
+// ===================================
+
+// Get all trashed items
+app.get('/api/data/trash', async (req, res) => {
+    try {
+        const trash = await getTrash();
+
+        // Add time remaining info for each item
+        const now = new Date();
+        const trashWithTimeRemaining = trash.map(item => {
+            const deletedDate = new Date(item.deletedAt);
+            const daysOld = Math.floor((now - deletedDate) / (24 * 60 * 60 * 1000));
+            const daysRemaining = Math.max(0, TRASH_RETENTION_DAYS - daysOld);
+
+            return {
+                ...item,
+                daysOld,
+                daysRemaining,
+                willBeDeletedAt: new Date(
+                    deletedDate.getTime() + TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000
+                ).toISOString()
+            };
+        });
+
+        res.json(trashWithTimeRemaining);
+    } catch (error) {
+        console.error('Error reading trash:', error);
+        res.status(500).json({ error: 'Failed to read trash' });
+    }
+});
+
+// Restore item from trash
+app.post('/api/data/trash/:type/:id/restore', async (req, res) => {
+    try {
+        const { type, id } = req.params;
+
+        // Validate type
+        if (!['list', 'note'].includes(type)) {
+            return res.status(400).json({ error: 'Invalid item type' });
+        }
+
+        // Validate ID format
+        if (!id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            return res.status(400).json({ error: 'Invalid item ID' });
+        }
+
+        const data = await restoreFromTrash(type, id);
+
+        // Restore the item based on type
+        if (type === 'list') {
+            // Add list back to lists.json
+            let lists = [];
+            if (existsSync(LISTS_FILE)) {
+                const content = await readFile(LISTS_FILE, 'utf-8');
+                lists = JSON.parse(content);
+            }
+            lists.push(data);
+            await writeFile(LISTS_FILE, JSON.stringify(lists, null, 2));
+        } else if (type === 'note') {
+            // Add note back to notes.json and restore content file
+            const { metadata, content } = data;
+
+            let notes = [];
+            if (existsSync(NOTES_FILE)) {
+                const notesContent = await readFile(NOTES_FILE, 'utf-8');
+                notes = JSON.parse(notesContent);
+            }
+            notes.push(metadata);
+            await writeFile(NOTES_FILE, JSON.stringify(notes, null, 2));
+
+            // Restore content file
+            const newFilename = buildNoteFilename(metadata.title, id);
+            const noteFile = path.join(NOTES_DIR, `${newFilename}.md`);
+            await writeFile(noteFile, content);
+        }
+
+        res.json({ success: true, message: `${type} restored from trash` });
+    } catch (error) {
+        console.error('Error restoring from trash:', error);
+        res.status(500).json({ error: 'Failed to restore from trash' });
+    }
+});
+
+// Permanently delete item from trash
+app.delete('/api/data/trash/:type/:id', async (req, res) => {
+    try {
+        const { type, id } = req.params;
+
+        // Validate type
+        if (!['list', 'note'].includes(type)) {
+            return res.status(400).json({ error: 'Invalid item type' });
+        }
+
+        // Validate ID format
+        if (!id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            return res.status(400).json({ error: 'Invalid item ID' });
+        }
+
+        await permanentlyDeleteFromTrash(type, id);
+        res.json({ success: true, message: 'Permanently deleted from trash' });
+    } catch (error) {
+        console.error('Error permanently deleting from trash:', error);
+        res.status(500).json({ error: 'Failed to permanently delete from trash' });
     }
 });
 

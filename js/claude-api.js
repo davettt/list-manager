@@ -6,36 +6,36 @@
 const ClaudeAPI = (function () {
     'use strict';
 
-    // Use proxy when running on localhost dev server, direct API otherwise
-    const isLocalDev =
-        window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    // Always use the API proxy endpoint (backend server is always running)
+    // This works for: localhost, PM2 on same machine, and remote servers
+    const useProxy = true;
 
     // Provider configurations
     const PROVIDERS = {
         claude: {
             name: 'Claude (Anthropic)',
-            endpoint: isLocalDev
+            endpoint: useProxy
                 ? '/api/ai?provider=claude'
                 : 'https://api.anthropic.com/v1/messages',
             defaultModel: 'claude-haiku-4-5',
-            maxTokens: 1000,
+            maxTokens: 8000,
             apiVersion: '2023-06-01'
         },
         openai: {
             name: 'ChatGPT (OpenAI)',
-            endpoint: isLocalDev
+            endpoint: useProxy
                 ? '/api/ai?provider=openai'
                 : 'https://api.openai.com/v1/chat/completions',
             defaultModel: 'gpt-4-turbo-preview',
-            maxTokens: 1000
+            maxTokens: 8000
         },
         gemini: {
             name: 'Gemini (Google)',
-            endpoint: isLocalDev
+            endpoint: useProxy
                 ? '/api/ai?provider=gemini'
                 : 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
             defaultModel: 'gemini-pro',
-            maxTokens: 1000
+            maxTokens: 8000
         }
     };
 
@@ -64,13 +64,8 @@ const ClaudeAPI = (function () {
             const selectedModel = model || config.defaultModel;
             const endpoint = config.endpoint;
 
-            console.log('Making API request to:', provider);
-            console.log('Using model:', selectedModel);
-            console.log('Using proxy:', isLocalDev);
-
             // Format request based on provider
             let requestBody;
-            const headers = { 'Content-Type': 'application/json' };
 
             if (provider === 'claude') {
                 requestBody = {
@@ -81,10 +76,8 @@ const ClaudeAPI = (function () {
                 if (systemPrompt) {
                     requestBody.system = systemPrompt;
                 }
-                if (!isLocalDev) {
-                    headers['x-api-key'] = apiKey;
-                    headers['anthropic-version'] = config.apiVersion;
-                }
+                // When using proxy, server reads API key from environment
+                // No need to include credentials in request
             } else if (provider === 'openai') {
                 const messages = [];
                 if (systemPrompt) {
@@ -97,9 +90,8 @@ const ClaudeAPI = (function () {
                     max_tokens: config.maxTokens,
                     messages: messages
                 };
-                if (!isLocalDev) {
-                    headers['Authorization'] = `Bearer ${apiKey}`;
-                }
+                // When using proxy, server reads API key from environment
+                // No need to include credentials in request
             } else if (provider === 'gemini') {
                 const parts = [];
                 if (systemPrompt) {
@@ -114,35 +106,20 @@ const ClaudeAPI = (function () {
                         maxOutputTokens: config.maxTokens
                     }
                 };
-                // Gemini uses API key in URL parameter when not using proxy
-                if (!isLocalDev) {
-                    // API key will be added to URL
-                }
+                // When using proxy, server reads API key from environment
+                // No need to include credentials in request
             }
 
-            // When using proxy, server reads API key/provider from environment
-            // Direct API calls include credentials in headers
-            const fetchOptions = isLocalDev
-                ? {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify(requestBody)
-                  }
-                : {
-                      method: 'POST',
-                      headers,
-                      body: JSON.stringify(requestBody)
-                  };
+            // Always use proxy - server reads API key/provider from environment
+            const fetchOptions = {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            };
 
-            // For Gemini direct API, add key to URL
-            let fetchUrl = endpoint;
-            if (provider === 'gemini' && !isLocalDev) {
-                fetchUrl += `?key=${apiKey}`;
-            }
+            const fetchUrl = endpoint;
 
             const response = await fetch(fetchUrl, fetchOptions);
-
-            console.log('API response status:', response.status);
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
@@ -154,7 +131,6 @@ const ClaudeAPI = (function () {
             }
 
             const data = await response.json();
-            console.log('API response data:', data);
 
             // Parse response based on provider format
             let responseText;

@@ -7,7 +7,7 @@
             name="description"
             content="Privacy-first list manager. Create any type of list with optional AI suggestions. All data stays local."
         />
-        <title>List Manager</title>
+        <title>List + Note Manager</title>
 
         <!-- Favicon -->
         <link rel="icon" type="image/svg+xml" href="favicon.svg" />
@@ -24,7 +24,7 @@
             <div class="container">
                 <div class="app-title">
                     <img src="logo.svg" alt="List Manager Logo" class="app-logo" />
-                    <h1>List Manager</h1>
+                    <h1>List + Note Manager</h1>
                 </div>
                 <nav class="app-nav">
                     <button id="lists-tab-btn" class="tab-btn active" aria-label="Lists tab">
@@ -32,6 +32,26 @@
                     </button>
                     <button id="notes-tab-btn" class="tab-btn" aria-label="Notes tab">Notes</button>
                 </nav>
+                <button id="trash-btn" class="icon-btn trash-btn" aria-label="View trash">
+                    <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path
+                            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                        ></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                    <span id="trash-count-badge" class="trash-count-badge" hidden>0</span>
+                </button>
                 <button id="settings-btn" class="icon-btn" aria-label="Settings">
                     <svg
                         width="24"
@@ -156,10 +176,37 @@
                 </div>
 
                 <!-- Notes View -->
-                <div id="notes-view" class="view-section" style="display: none">
-                    <!-- Notes Filters Section -->
-                    <div class="search-filters">
-                        <div class="search-bar">
+                <div
+                    id="notes-view"
+                    class="view-section notes-view-with-sidebar"
+                    style="display: none"
+                >
+                    <!-- Notes Sidebar -->
+                    <aside id="notes-sidebar" class="notes-sidebar">
+                        <!-- Sidebar Header with Close Button -->
+                        <div class="sidebar-header">
+                            <h3>Notes</h3>
+                            <button
+                                id="notes-sidebar-close"
+                                class="icon-btn sidebar-close"
+                                aria-label="Close sidebar"
+                            >
+                                <svg
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Sidebar Search -->
+                        <div class="sidebar-search">
                             <input
                                 type="text"
                                 id="notes-search-input"
@@ -168,8 +215,8 @@
                             />
                             <svg
                                 class="search-icon"
-                                width="20"
-                                height="20"
+                                width="16"
+                                height="16"
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
@@ -180,294 +227,331 @@
                             </svg>
                         </div>
 
-                        <div class="filters">
-                            <select id="note-category-filter" aria-label="Filter by category">
-                                <option value="">All Categories</option>
-                                <option value="personal">Personal</option>
-                                <option value="work">Work</option>
-                                <option value="projects">Projects</option>
-                                <option value="ideas">Ideas</option>
-                                <option value="other">Other</option>
-                            </select>
+                        <!-- Category Groups (will be rendered by JavaScript) -->
+                        <div id="notes-categories" class="notes-categories">
+                            <!-- Categories will be rendered here -->
+                        </div>
+                    </aside>
 
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="notes-favorites-filter" />
-                                <span>Favorites Only</span>
-                            </label>
-
+                    <!-- Notes Editor Area Wrapper -->
+                    <div class="notes-editor-area">
+                        <!-- Editor Header with Toggle Button -->
+                        <div class="editor-header">
                             <button
-                                id="new-note-btn"
-                                class="btn btn-primary btn-sm"
-                                aria-label="Create new note"
+                                id="notes-sidebar-toggle"
+                                class="icon-btn sidebar-toggle-btn"
+                                aria-label="Toggle sidebar"
                             >
                                 <svg
-                                    width="16"
-                                    height="16"
+                                    width="20"
+                                    height="20"
                                     viewBox="0 0 24 24"
                                     fill="none"
                                     stroke="currentColor"
                                     stroke-width="2"
                                 >
-                                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                                    <line x1="3" y1="18" x2="21" y2="18"></line>
                                 </svg>
-                                New Note
                             </button>
                         </div>
-                    </div>
 
-                    <!-- Notes Quick List -->
-                    <ul id="notes-list" class="notes-quick-list">
-                        <!-- Notes will be rendered here -->
-                    </ul>
-
-                    <!-- Notes Editor Container -->
-                    <div class="notes-editor-container">
-                        <div id="no-note-selected" class="no-note-selected" style="display: flex">
-                            <svg
-                                width="64"
-                                height="64"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="1"
+                        <!-- Notes Editor Container -->
+                        <div class="notes-editor-container">
+                            <div
+                                id="no-note-selected"
+                                class="no-note-selected"
+                                style="display: flex"
                             >
-                                <path
-                                    d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
-                                ></path>
-                                <path
-                                    d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
-                                ></path>
-                            </svg>
-                            <h2>No Note Selected</h2>
-                            <p>Create or select a note to get started</p>
-                        </div>
-
-                        <div id="note-editor" style="display: none" class="note-editor">
-                            <!-- Note Metadata -->
-                            <div class="note-metadata">
-                                <input
-                                    type="text"
-                                    id="note-title-input"
-                                    class="note-title-input"
-                                    placeholder="Note title..."
-                                    aria-label="Note title"
-                                />
-                                <div class="note-metadata-row">
-                                    <select id="note-category-select" aria-label="Note category">
-                                        <option value="personal">Personal</option>
-                                        <option value="work">Work</option>
-                                        <option value="projects">Projects</option>
-                                        <option value="ideas">Ideas</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" id="note-favorite-checkbox" />
-                                        <span>Favorite</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <!-- Note Controls -->
-                            <div class="note-controls">
-                                <div class="ai-button-group">
-                                    <button
-                                        id="note-ai-tldr-btn"
-                                        class="btn btn-secondary btn-sm"
-                                        title="Generate TLDR"
-                                    >
-                                        <svg
-                                            width="16"
-                                            height="16"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                        >
-                                            <polygon
-                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-                                            ></polygon>
-                                        </svg>
-                                        TLDR
-                                    </button>
-                                    <button
-                                        class="ai-info-btn"
-                                        title="AI-generated summary. May contain inaccuracies."
-                                    >
-                                        <svg
-                                            width="16"
-                                            height="16"
-                                            viewBox="0 0 24 24"
-                                            fill="currentColor"
-                                            stroke="none"
-                                        >
-                                            <circle cx="12" cy="12" r="10"></circle>
-                                            <text
-                                                x="12"
-                                                y="16.5"
-                                                text-anchor="middle"
-                                                font-size="13"
-                                                font-weight="bold"
-                                                fill="white"
-                                            >
-                                                i
-                                            </text>
-                                        </svg>
-                                        <span class="ai-tooltip"
-                                            >AI-generated summary using language models. May contain
-                                            inaccuracies. Always verify important information.</span
-                                        >
-                                    </button>
-                                </div>
-                                <div class="ai-button-group">
-                                    <button
-                                        id="note-ai-grammar-btn"
-                                        class="btn btn-secondary btn-sm"
-                                        title="Check grammar"
-                                    >
-                                        <svg
-                                            width="16"
-                                            height="16"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                        >
-                                            <circle cx="11" cy="11" r="8"></circle>
-                                            <path d="m21 21-4.35-4.35"></path>
-                                        </svg>
-                                        Grammar
-                                    </button>
-                                    <button
-                                        class="ai-info-btn"
-                                        title="AI-generated grammar check. May miss errors or suggest unnecessary changes."
-                                    >
-                                        <svg
-                                            width="16"
-                                            height="16"
-                                            viewBox="0 0 24 24"
-                                            fill="currentColor"
-                                            stroke="none"
-                                        >
-                                            <circle cx="12" cy="12" r="10"></circle>
-                                            <text
-                                                x="12"
-                                                y="16.5"
-                                                text-anchor="middle"
-                                                font-size="13"
-                                                font-weight="bold"
-                                                fill="white"
-                                            >
-                                                i
-                                            </text>
-                                        </svg>
-                                        <span class="ai-tooltip"
-                                            >AI-generated grammar and spelling review. May miss
-                                            errors or suggest incorrect changes. Always review
-                                            suggestions carefully before applying.</span
-                                        >
-                                    </button>
-                                </div>
-                                <button
-                                    id="note-delete-btn"
-                                    class="btn btn-danger btn-sm"
-                                    title="Delete note"
+                                <svg
+                                    width="64"
+                                    height="64"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1"
                                 >
-                                    <svg
-                                        width="16"
-                                        height="16"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                    >
-                                        <polyline points="3 6 5 6 21 6"></polyline>
-                                        <path
-                                            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                                        ></path>
-                                    </svg>
-                                    Delete
-                                </button>
-
-                                <!-- Pane Toggle Buttons -->
-                                <div class="pane-toggle-group">
-                                    <button
-                                        id="note-toggle-editor-only"
-                                        class="btn btn-secondary btn-sm"
-                                        title="Show editor only"
-                                    >
-                                        <svg
-                                            width="16"
-                                            height="16"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                        >
-                                            <polyline points="16 18 22 12 16 6"></polyline>
-                                            <polyline points="8 6 2 12 8 18"></polyline>
-                                        </svg>
-                                    </button>
-                                    <button
-                                        id="note-toggle-both"
-                                        class="btn btn-secondary btn-sm active"
-                                        title="Show both editor and preview"
-                                    >
-                                        <svg
-                                            width="16"
-                                            height="16"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                        >
-                                            <rect x="3" y="3" width="7" height="18"></rect>
-                                            <rect x="14" y="3" width="7" height="18"></rect>
-                                        </svg>
-                                    </button>
-                                    <button
-                                        id="note-toggle-preview-only"
-                                        class="btn btn-secondary btn-sm"
-                                        title="Show preview only"
-                                    >
-                                        <svg
-                                            width="16"
-                                            height="16"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                        >
-                                            <polyline points="8 18 2 12 8 6"></polyline>
-                                            <polyline points="16 6 22 12 16 18"></polyline>
-                                        </svg>
-                                    </button>
-                                </div>
+                                    <path
+                                        d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                                    ></path>
+                                    <path
+                                        d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+                                    ></path>
+                                </svg>
+                                <h2>No Note Selected</h2>
+                                <p>Create or select a note to get started</p>
                             </div>
 
-                            <!-- Editor Panes -->
-                            <div class="editor-panes">
-                                <!-- Edit Pane -->
-                                <div class="editor-pane edit-pane">
-                                    <textarea
-                                        id="note-content-textarea"
-                                        class="note-textarea"
-                                        placeholder="Write your note in markdown..."
-                                        aria-label="Note content"
-                                    ></textarea>
-                                </div>
-
-                                <!-- Preview Pane -->
-                                <div class="editor-pane preview-pane">
-                                    <div id="note-preview" class="note-preview markdown-body">
-                                        <!-- Preview will be rendered here -->
+                            <div id="note-editor" style="display: none" class="note-editor">
+                                <!-- Note Metadata -->
+                                <div class="note-metadata">
+                                    <input
+                                        type="text"
+                                        id="note-title-input"
+                                        class="note-title-input"
+                                        placeholder="Note title..."
+                                        maxlength="75"
+                                        aria-label="Note title"
+                                    />
+                                    <div class="note-metadata-row">
+                                        <select
+                                            id="note-category-select"
+                                            aria-label="Note category"
+                                        >
+                                            <option value="personal">Personal</option>
+                                            <option value="work">Work</option>
+                                            <option value="projects">Projects</option>
+                                            <option value="ideas">Ideas</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="note-favorite-checkbox" />
+                                            <span>Favorite</span>
+                                        </label>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Note Status -->
-                            <div class="note-status">
-                                <span id="note-status-text">All changes saved</span>
+                                <!-- Note Controls -->
+                                <div class="note-controls">
+                                    <div class="ai-button-group">
+                                        <button
+                                            id="note-ai-tldr-btn"
+                                            class="btn btn-secondary btn-sm"
+                                            title="Generate TLDR"
+                                        >
+                                            <svg
+                                                width="16"
+                                                height="16"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                            >
+                                                <polygon
+                                                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                                                ></polygon>
+                                            </svg>
+                                            TLDR
+                                        </button>
+                                        <button
+                                            class="ai-info-btn"
+                                            title="AI-generated summary. May contain inaccuracies."
+                                        >
+                                            <svg
+                                                width="16"
+                                                height="16"
+                                                viewBox="0 0 24 24"
+                                                fill="currentColor"
+                                                stroke="none"
+                                            >
+                                                <circle cx="12" cy="12" r="10"></circle>
+                                                <text
+                                                    x="12"
+                                                    y="16.5"
+                                                    text-anchor="middle"
+                                                    font-size="13"
+                                                    font-weight="bold"
+                                                    fill="white"
+                                                >
+                                                    i
+                                                </text>
+                                            </svg>
+                                            <span class="ai-tooltip"
+                                                >AI-generated summary using language models. May
+                                                contain inaccuracies. Always verify important
+                                                information.</span
+                                            >
+                                        </button>
+                                    </div>
+                                    <div class="ai-button-group">
+                                        <button
+                                            id="note-ai-grammar-btn"
+                                            class="btn btn-secondary btn-sm"
+                                            title="Check grammar"
+                                        >
+                                            <svg
+                                                width="16"
+                                                height="16"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                            >
+                                                <circle cx="11" cy="11" r="8"></circle>
+                                                <path d="m21 21-4.35-4.35"></path>
+                                            </svg>
+                                            Grammar
+                                        </button>
+                                        <button
+                                            class="ai-info-btn"
+                                            title="AI-generated grammar check. May miss errors or suggest unnecessary changes."
+                                        >
+                                            <svg
+                                                width="16"
+                                                height="16"
+                                                viewBox="0 0 24 24"
+                                                fill="currentColor"
+                                                stroke="none"
+                                            >
+                                                <circle cx="12" cy="12" r="10"></circle>
+                                                <text
+                                                    x="12"
+                                                    y="16.5"
+                                                    text-anchor="middle"
+                                                    font-size="13"
+                                                    font-weight="bold"
+                                                    fill="white"
+                                                >
+                                                    i
+                                                </text>
+                                            </svg>
+                                            <span class="ai-tooltip"
+                                                >AI-generated grammar and spelling review. May miss
+                                                errors or suggest incorrect changes. Always review
+                                                suggestions carefully before applying.</span
+                                            >
+                                        </button>
+                                    </div>
+                                    <button
+                                        id="note-restore-backup-btn"
+                                        class="btn btn-secondary btn-sm"
+                                        title="Restore from backup (created when grammar updates are applied)"
+                                        style="display: none"
+                                    >
+                                        <svg
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <path
+                                                d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+                                            ></path>
+                                            <path d="M21 3v5h-5"></path>
+                                            <path
+                                                d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+                                            ></path>
+                                            <path d="M3 21v-5h5"></path>
+                                        </svg>
+                                        Restore Backup
+                                    </button>
+                                    <button
+                                        id="note-delete-btn"
+                                        class="btn btn-secondary btn-sm"
+                                        title="Delete note"
+                                    >
+                                        <svg
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path
+                                                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                                            ></path>
+                                        </svg>
+                                        Delete
+                                    </button>
+
+                                    <!-- Pane Toggle Buttons -->
+                                    <div class="pane-toggle-group">
+                                        <button
+                                            id="note-toggle-editor-only"
+                                            class="btn btn-secondary btn-sm"
+                                            title="Show editor only"
+                                        >
+                                            <svg
+                                                width="16"
+                                                height="16"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                            >
+                                                <polyline points="16 18 22 12 16 6"></polyline>
+                                                <polyline points="8 6 2 12 8 18"></polyline>
+                                            </svg>
+                                        </button>
+                                        <button
+                                            id="note-toggle-both"
+                                            class="btn btn-secondary btn-sm active"
+                                            title="Show both editor and preview"
+                                        >
+                                            <svg
+                                                width="16"
+                                                height="16"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                            >
+                                                <rect x="3" y="3" width="7" height="18"></rect>
+                                                <rect x="14" y="3" width="7" height="18"></rect>
+                                            </svg>
+                                        </button>
+                                        <button
+                                            id="note-toggle-preview-only"
+                                            class="btn btn-secondary btn-sm"
+                                            title="Show preview only"
+                                        >
+                                            <svg
+                                                width="16"
+                                                height="16"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                            >
+                                                <polyline points="8 18 2 12 8 6"></polyline>
+                                                <polyline points="16 6 22 12 16 18"></polyline>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Editor Panes -->
+                                <div class="editor-panes">
+                                    <!-- Edit Pane -->
+                                    <div class="editor-pane edit-pane">
+                                        <textarea
+                                            id="note-content-textarea"
+                                            class="note-textarea"
+                                            placeholder="Write your note in markdown..."
+                                            aria-label="Note content"
+                                        ></textarea>
+                                    </div>
+
+                                    <!-- Preview Pane -->
+                                    <div class="editor-pane preview-pane">
+                                        <div id="note-preview" class="note-preview markdown-body">
+                                            <!-- Preview will be rendered here -->
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Note Status -->
+                                <div class="note-status">
+                                    <span id="note-status-text">All changes saved</span>
+                                    <div class="character-counter-container">
+                                        <div class="character-counter-bar">
+                                            <div
+                                                id="character-counter-fill"
+                                                class="character-counter-fill"
+                                            ></div>
+                                        </div>
+                                        <span
+                                            id="character-counter-text"
+                                            class="character-counter-text"
+                                            >0 / 3000</span
+                                        >
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -478,22 +562,45 @@
         <!-- Footer Actions -->
         <footer class="app-footer">
             <div class="container footer-actions">
-                <button id="new-list-btn" class="btn btn-primary">
-                    <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                    >
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    New List
-                </button>
-                <button id="import-btn" class="btn btn-secondary">Import</button>
-                <button id="export-btn" class="btn btn-secondary">Export All</button>
+                <!-- Lists Footer Actions -->
+                <div id="lists-footer-actions" class="footer-actions-group">
+                    <button id="new-list-btn" class="btn btn-primary">
+                        <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        New List
+                    </button>
+                    <button id="import-btn" class="btn btn-secondary">Import</button>
+                    <button id="export-btn" class="btn btn-secondary">Export All</button>
+                </div>
+
+                <!-- Notes Footer Actions -->
+                <div id="notes-footer-actions" class="footer-actions-group" style="display: none">
+                    <button id="new-note-btn" class="btn">
+                        <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        New Note
+                    </button>
+                    <button id="notes-import-btn" class="btn btn-secondary">Import</button>
+                    <button id="notes-export-btn" class="btn btn-secondary">Export All</button>
+                </div>
             </div>
         </footer>
 
@@ -545,6 +652,7 @@
                             id="list-name-input"
                             class="input-large"
                             placeholder="List name"
+                            maxlength="75"
                             aria-label="List name"
                         />
 
@@ -591,6 +699,7 @@
                                 type="text"
                                 id="new-item-input"
                                 placeholder="Add an item..."
+                                maxlength="500"
                                 aria-label="New item"
                             />
                             <button id="add-item-btn" class="btn btn-primary">Add</button>
@@ -649,8 +758,8 @@
 
                     <!-- Modal Actions -->
                     <div class="modal-actions">
-                        <button id="edit-list-btn" class="btn btn-secondary">Save Changes</button>
-                        <button id="delete-list-btn" class="btn btn-danger">Delete List</button>
+                        <button id="delete-list-btn" class="btn btn-secondary">Delete List</button>
+                        <button id="edit-list-btn" class="btn btn-primary">Save Changes</button>
                     </div>
                 </div>
             </div>
@@ -753,6 +862,43 @@
             </div>
         </div>
 
+        <!-- Trash Modal -->
+        <div
+            id="trash-modal"
+            class="modal"
+            hidden
+            aria-modal="true"
+            aria-labelledby="trash-modal-title"
+        >
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="trash-modal-title">🗑️ Trash (14-Day Recovery)</h2>
+                    <button id="trash-modal-close" class="icon-btn" aria-label="Close trash">
+                        <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="trash-list" class="trash-list">
+                        <!-- Trash items will be rendered here -->
+                    </div>
+                    <div id="trash-empty" class="trash-empty" hidden>
+                        <p>✨ Your trash is empty</p>
+                        <p>Deleted items will appear here for 14 days</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- AI Suggestions Panel -->
         <div id="ai-panel" class="ai-panel" role="complementary" aria-label="AI suggestions">
             <div class="ai-panel-header">
@@ -792,6 +938,9 @@
         <!-- Markdown library (for preview rendering) -->
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
+        <!-- DOMPurify for XSS protection on markdown rendering -->
+        <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+
         <!-- Scripts - Load in order: utils, storage, ui-helpers, claude-api, then notes, then app -->
         <script src="js/utils.js"></script>
         <script src="js/storage.js"></script>
@@ -799,6 +948,7 @@
         <script src="js/claude-api.js"></script>
         <script src="js/notes-storage.js"></script>
         <script src="js/notes-editor.js"></script>
+        <script src="js/trash-manager.js"></script>
         <script src="js/notes-ai.js"></script>
         <script src="js/notes-app.js"></script>
         <script src="js/app.js"></script>

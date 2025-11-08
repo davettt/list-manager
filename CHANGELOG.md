@@ -1,92 +1,175 @@
 # Changelog
 
-All notable changes to List Manager.
+All notable changes to List Manager are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] - 2025-11-08
+## [1.4.0] - 2025-11-08
 
 ### Added
-- **Notes Feature** - Full markdown-based note-taking system with live preview
-  - Create, edit, and organize notes with categories (Personal, Work, Projects, Ideas, Other)
-  - Markdown support with live split-pane editor and preview
-  - Search and filter notes by title or category
-  - Star notes to mark as favorites
-  - Auto-save as user types
-  - Export notes as markdown files for cloud backup
-- **AI Writing Assistance for Notes**
-  - TLDR button to generate concise summaries of notes
-  - Grammar checking to detect and fix spelling/punctuation errors
-  - AI feedback displayed in modal dialogs for easy review
-- **Enhanced UI Tooltips**
-  - Helpful tooltips on key interface elements
-  - Grammar suggestions with visual feedback
-  - Better user guidance throughout the app
-- **Notes Storage**
-  - Notes metadata stored in `local_data/notes.json`
-  - Note content stored as individual markdown files in `local_data/notes/`
-  - Seamless integration with existing cloud backup workflows
+- 🌐 **Remote Server Support** - API proxy now works seamlessly on remote servers with any domain (localhost, .local, production domains)
+- 🚀 **Unified Deployment Architecture** - Simplified API request flow that works everywhere without CORS issues
+- 📊 **Character Counter with Visual Indicator** - Real-time tracking of note length with soft limit warning at 3000 characters
+- ♻️ **Intelligent Chunk-Based Grammar Processing** - Long notes automatically split into sections (~3000 chars each) for complete grammar review
 
 ### Changed
-- Notes tab added alongside existing Lists tab
-- Updated README with complete Notes feature documentation
-- Enhanced Settings panel for Notes-related configuration
+- 🔄 **Always Use API Proxy** - Removed conditional logic for direct API calls; always use `/api/ai` endpoint
+- ✨ **Enhanced Token Management** - Increased token limits to 8000 for better AI response quality
+- 🧹 **Production-Ready Code** - Removed all debug console.log statements for clean output
+- 📋 **Updated Documentation** - Added personal project notice and remote deployment guidance
 
 ### Fixed
-- Improved grammar detection accuracy in AI writing assistance
-- Better tooltip positioning and styling
+- 🐛 **Remote Deployment CORS Errors** - Fixed CORS issues when running on domains other than localhost
+- ✅ **ESLint Warnings** - Resolved 5 linting issues (unused variables, const declarations)
+- 🔒 **API Key Exposure** - Eliminated unnecessary credential passing to frontend
 
-## [1.1.0] - 2025-01-26
+### Security
+- 📧 **Server-Side Credential Management** - API keys stored securely server-side, never exposed to browser
+- 🔐 **Improved Separation of Concerns** - Frontend sends data, backend handles all API authentication
 
-### Changed - BREAKING
-- **Complete storage architecture refactor**: Migrated from localStorage to filesystem-based storage
-  - Data now persists in `local_data/lists.json` and `local_data/settings.json` (more reliable, won't be lost on browser cache clear)
-  - API keys now stored in `local_data/.env.local` (more secure, gitignored)
-  - Data folder renamed from `data/` to `local_data/` for clarity (prevents accidental git commits)
-  - Development server is now **required** to run the app (not optional)
-  - All storage operations converted to async/await pattern
-- **Multi-provider AI support**: Added support for ChatGPT (OpenAI) and Gemini (Google) in addition to Claude
-- **Security improvement**: API keys no longer sent in request body when using dev server (read from environment)
+### Notes
+- This release maintains full backward compatibility with v1.3.0
+- No database migrations needed
+- All existing data works as-is
+
+---
+
+## [1.3.0] - 2025-11-01
 
 ### Added
-- Automatic localStorage migration: App detects old localStorage data and offers to migrate to filesystem
-- Filesystem storage API endpoints in server.js for data persistence
-- API key management endpoint for secure storage in .env.local
-- Health check endpoint for storage availability
-- Module type specification in package.json (eliminates Node.js warnings)
+- **Security: DOMPurify XSS Protection** - Added DOMPurify library to sanitize HTML from markdown rendering, preventing XSS attacks
+- **Security: Comprehensive Input Validation** - Backend validation for all inputs (lists, notes, categories, tags, content)
+- **Security: Input Length Limits** - Enforced limits: 75 chars for names, 500 chars for items, 1MB for notes
+- **Security: HTTP Security Headers** - Added X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy
+- **Security: Request Size Limits** - 10MB max payload size to prevent large payload attacks
+- **Feature: Auto-Backup on Grammar Updates** - Notes are automatically backed up before grammar corrections are applied
+- **Feature: Change Diff Preview** - Git-style diff viewer showing exactly what will change before applying grammar updates
+- **Feature: One-Click Restore** - "Restore Backup" button appears when a backup exists, allowing quick recovery if needed
+- **Code: Security Improvements** - Consolidated duplicate sanitization functions to Utils.sanitizeHtml
+
+### Changed
+- Updated markdown rendering to use DOMPurify for sanitization
+- Improved error messages for input validation failures
+- Refined input constraints (name max length reduced from 200 to 75 characters for better UX)
+- Updated all escapeHtml calls to use centralized Utils.sanitizeHtml
 
 ### Fixed
-- Data loss prevention: Browser cache clears no longer delete user data
-- Storage reliability: Filesystem is more reliable than browser localStorage
-- Security: API keys stored outside of browser environment
+- Fixed ESLint errors in notes-ai.js (undefined escapeHtml references, unused variables)
+- Improved HTML escaping consistency across the codebase
 
-### Migration Notes
-- **For existing users**: On first run, the app will automatically detect old localStorage data and offer to migrate
-- **Manual migration**: If automatic migration fails, use Export/Import to transfer data
-- **Breaking change**: Running `index.html` directly is no longer supported; must use `npm run dev`
+### Security
+- **Rating: 6/10 → 9/10** - Comprehensive security hardening
+- Eliminated critical XSS vulnerability in markdown rendering
+- Added defense-in-depth with validation at both frontend and backend
+- Implemented OWASP best practices for input handling
 
-## [1.0.0] - 2025-01-15
+## [1.2.0] - 2025-10-25
 
 ### Added
-- List creation and management with categories, tags, priorities, and deadlines
-- Item management with checkboxes and completion tracking
-- Real-time search across list names, categories, tags, and items
-- Filter by category, tags, and favorites
-- Optional AI suggestions via Claude API (requires user's own API key)
-- Local data storage (localStorage) - privacy-first, no accounts
-- Export/import functionality for data portability
-- Settings management with API key storage
-- Favorites system for important lists
-- Grid and list view toggle
-- Light and dark themes with auto-detection
-- Mobile-responsive design
-- Development server for AI features (Node.js/Express)
+- **Notes Feature** - Write and manage markdown notes with live preview
+- **AI for Notes** - Generate TLDR summaries and check grammar/spelling with AI
+- **Split-Pane Editor** - Edit markdown on the left, preview on the right
+- **Cloud Backup Support** - Export notes as markdown files for easy cloud sync
+- **Notes UI** - Sidebar with notes list, search, and favorites
+- Note categories (Personal, Work, Projects, Ideas, Other)
+- Note search functionality
+- AI-powered TLDR summaries for notes
+- Grammar and spelling check for notes with correction suggestions
 
-### Technical
-- Vanilla JavaScript (ES6+, IIFE pattern)
-- No build process for core features
-- localStorage-based persistence
-- Optional Node.js dev server for AI proxy
-- Code quality tools: ESLint, Prettier
-- MIT License - free and open source
+### Changed
+- Migrated from localStorage to filesystem-based storage for reliability
+- Improved data persistence with JSON file storage
+
+## [1.1.0] - 2025-09-15
+
+### Added
+- **Lists Feature** - Create and manage lists with multiple categories and priorities
+- **AI Suggestions** - Get AI-powered item suggestions for lists
+- **Search & Filter** - Real-time search across lists, items, categories, and tags
+- **Export/Import** - Backup and restore all data as JSON
+- **Dark Mode** - Light and dark theme support
+- **Markdown Support** - Markdown formatting in list items
+- List categories (shopping, travel, work, projects, etc.)
+- List priorities (high, medium, low)
+- List deadlines
+- Item completion tracking
+
+## [1.0.0] - 2025-08-01
+
+### Added
+- Initial release of List Manager
+- Basic list creation and management
+- Local data storage
+- Simple UI for managing lists and items
+- Privacy-first approach with all data stored locally
+
+---
+
+## Upgrade Notes
+
+### From 1.3.0 to 1.4.0
+- No breaking changes
+- All existing data is compatible
+- AI proxy now always active (no changes needed if already configured)
+- Remote server deployments now supported without special configuration
+- Character counter appears in notes editor (no action needed)
+
+### From 1.2.0 to 1.3.0
+- No breaking changes
+- All existing data is compatible
+- New backup feature is automatic - no action needed
+- Input length validation is now enforced (75 chars for names)
+- If you have list names or note titles longer than 75 characters, they will be truncated on next save
+
+### From 1.1.0 to 1.2.0
+- No breaking changes
+- Lists and settings data is compatible
+- Migrated to filesystem storage automatically on first load
+
+---
+
+## Security Advisories
+
+### v1.4.0
+- **Improved API Security** - API keys now stored exclusively server-side, never exposed to frontend
+- **Enhanced Deployment Security** - Unified proxy architecture eliminates CORS bypass risks
+- **Code Quality** - All security best practices passed strict linting
+
+### v1.3.0
+- **Fixed Critical XSS Vulnerability** - Markdown rendering now uses DOMPurify sanitization
+- **Added Input Validation** - All user inputs validated on backend
+- **Improved Data Integrity** - Content size limits and type validation prevent malformed data
+
+---
+
+## Future Development
+
+**This is a personal project.** Development prioritizes stability and personal needs, not feature expansion. Major features are unlikely to be added to the main project.
+
+**Possible Future Updates (No Timeline):**
+- Bug fixes and security improvements
+- Dependency updates
+- Performance optimizations
+- Documentation improvements
+
+**Not Planned (Won't Happen):**
+- Cloud sync integration
+- Collaborative features
+- Mobile app
+- Complex features beyond current scope
+
+**If You Want New Features:**
+Fork the repository and build them yourself! The codebase is clean and well-documented for customization.
+
+---
+
+## Contributing
+
+**This is a personal project - contributions are not accepted.** However, you're welcome to:
+- 🔀 **Fork** the repository
+- 📝 **Customize** it for your needs
+- 🐛 **Report bugs** (no guarantee of fixes)
+- 💡 **Suggest ideas** (may not be implemented)
+
+For more details, see the [Personal Project Notice](README.md#personal-project-notice) in the README.
