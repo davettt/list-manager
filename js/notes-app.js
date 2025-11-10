@@ -5,6 +5,9 @@
 
 // eslint-disable-next-line no-unused-vars
 const NotesApp = (() => {
+    // Note categories - single source of truth
+    const NOTE_CATEGORIES = ['personal', 'travel', 'health', 'work', 'projects', 'ideas', 'other'];
+
     let allNotes = [];
     // eslint-disable-next-line no-unused-vars
     let filteredNotes = [];
@@ -25,11 +28,33 @@ const NotesApp = (() => {
     };
 
     /**
+     * Populate category dropdown with categories from NOTE_CATEGORIES
+     */
+    function populateCategoryDropdown() {
+        const select = document.getElementById('note-category-select');
+        if (!select) {
+            return;
+        }
+
+        // Clear existing options
+        select.innerHTML = '';
+
+        // Add categories as options
+        NOTE_CATEGORIES.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+            select.appendChild(option);
+        });
+    }
+
+    /**
      * Initialize the notes app
      */
     async function initialize() {
         setupTabSwitching();
         setupEventListeners();
+        populateCategoryDropdown();
         // Restore sidebar state early to prevent visual flashing
         restoreSidebarState();
         // eslint-disable-next-line no-undef
@@ -201,10 +226,9 @@ const NotesApp = (() => {
      */
     function groupNotesByCategory(notes) {
         const groups = {};
-        const categories = ['personal', 'travel', 'health', 'work', 'projects', 'ideas', 'other'];
 
         // Initialize empty groups for all categories
-        categories.forEach(cat => {
+        NOTE_CATEGORIES.forEach(cat => {
             groups[cat] = [];
         });
 
@@ -630,7 +654,9 @@ const NotesApp = (() => {
         selectNote,
         createNewNote,
         deleteCurrentNote,
-        refreshNotesList
+        refreshNotesList,
+        populateCategoryDropdown,
+        NOTE_CATEGORIES
     };
 })();
 
