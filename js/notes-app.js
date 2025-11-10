@@ -201,7 +201,7 @@ const NotesApp = (() => {
      */
     function groupNotesByCategory(notes) {
         const groups = {};
-        const categories = ['personal', 'work', 'projects', 'ideas', 'other'];
+        const categories = ['personal', 'travel', 'health', 'work', 'projects', 'ideas', 'other'];
 
         // Initialize empty groups for all categories
         categories.forEach(cat => {
