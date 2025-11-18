@@ -2,6 +2,8 @@
 // List Manager - Main Application
 // ===================================
 
+/* global ImportHandler, NotesApp */
+
 (function () {
     'use strict';
 
@@ -13,6 +15,7 @@
         lists: [],
         currentList: null,
         settings: {},
+        categories: [],
         filters: {
             search: '',
             category: '',
@@ -65,10 +68,15 @@
     async function loadData() {
         state.lists = await Storage.getLists();
         state.settings = await Storage.getSettings();
+        state.categories = await Storage.getCategories();
 
         // Update filters UI
         UI.populateCategoryFilter(state.lists);
         UI.populateTagFilter(state.lists);
+
+        // Populate category dropdowns
+        populateCategoryDropdowns();
+        populateCategoriesManagementUI();
     }
 
     /**
@@ -259,6 +267,218 @@
                 closeSettings();
             }
         });
+
+        // Category management
+        document.getElementById('add-category-btn')?.addEventListener('click', handleAddCategory);
+        document.getElementById('new-category-input')?.addEventListener('keypress', e => {
+            if (e.key === 'Enter') {
+                handleAddCategory();
+            }
+        });
+
+        // Category delete buttons are added dynamically in populateCategoriesManagementUI
+        document.getElementById('categories-ul')?.addEventListener('click', handleCategoryDelete);
+
+        // Text import modal
+        document.getElementById('text-import-close-btn')?.addEventListener('click', () => {
+            UI.hideModal('text-import-modal');
+            state.pendingTextImport = null;
+        });
+
+        document.getElementById('text-import-cancel-btn')?.addEventListener('click', () => {
+            UI.hideModal('text-import-modal');
+            state.pendingTextImport = null;
+        });
+
+        document
+            .getElementById('text-import-confirm-btn')
+            ?.addEventListener('click', confirmTextImport);
+
+        // Close text import modal on overlay click
+        document.getElementById('text-import-modal')?.addEventListener('click', e => {
+            if (e.target.id === 'text-import-modal') {
+                UI.hideModal('text-import-modal');
+                state.pendingTextImport = null;
+            }
+        });
+    }
+
+    // ===================================
+    // Category Management
+    // ===================================
+
+    /**
+     * Populate the list category dropdown with available categories
+     */
+    function populateCategoryDropdowns() {
+        const listCategorySelect = document.getElementById('list-category-input');
+        if (!listCategorySelect) {
+            return;
+        }
+
+        // Keep the "No Category" option
+        const currentValue = listCategorySelect.value;
+
+        // Remove all options except the first (No Category)
+        while (listCategorySelect.options.length > 1) {
+            listCategorySelect.remove(1);
+        }
+
+        // Add category options
+        state.categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+            listCategorySelect.appendChild(option);
+        });
+
+        // Restore previous value if it still exists
+        if (currentValue && state.categories.includes(currentValue)) {
+            listCategorySelect.value = currentValue;
+        } else if (currentValue) {
+            listCategorySelect.value = '';
+        }
+    }
+
+    /**
+     * Populate the categories management UI in settings
+     */
+    function populateCategoriesManagementUI() {
+        const categoriesList = document.getElementById('categories-ul');
+        const noCategoriesMsg = document.getElementById('no-categories-msg');
+
+        if (!categoriesList) {
+            return;
+        }
+
+        categoriesList.innerHTML = '';
+
+        if (state.categories.length === 0) {
+            noCategoriesMsg?.removeAttribute('hidden');
+            return;
+        }
+
+        noCategoriesMsg?.setAttribute('hidden', '');
+
+        state.categories.forEach(category => {
+            const li = document.createElement('li');
+            li.className = 'category-item';
+            li.innerHTML = `
+                <span class="category-name">${category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                <button class="icon-btn delete-category-btn" data-category="${category}" aria-label="Delete ${category}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            `;
+            categoriesList.appendChild(li);
+        });
+    }
+
+    /**
+     * Handle adding a new category
+     */
+    async function handleAddCategory() {
+        const input = document.getElementById('new-category-input');
+        if (!input) {
+            return;
+        }
+
+        const name = input.value.trim();
+        if (!name) {
+            UI.showToast('Please enter a category name', 'warning');
+            return;
+        }
+
+        try {
+            // Show loading state
+            const btn = document.getElementById('add-category-btn');
+            if (btn) {
+                const originalText = btn.textContent;
+                btn.disabled = true;
+                btn.textContent = 'Adding...';
+                btn.dataset.originalText = originalText;
+            }
+
+            // Add category via API
+            const result = await Storage.addCategory(name);
+
+            // Update state
+            state.categories = result.categories;
+
+            // Refresh UI
+            populateCategoryDropdowns();
+            populateCategoriesManagementUI();
+
+            // Refresh notes app categories
+            if (typeof NotesApp !== 'undefined' && NotesApp.refreshCategories) {
+                await NotesApp.refreshCategories();
+            }
+
+            // Clear input
+            input.value = '';
+
+            UI.showToast(`Category "${name}" added successfully`, 'success');
+        } catch (error) {
+            UI.showToast(error.message || 'Failed to add category', 'error');
+        } finally {
+            const btn = document.getElementById('add-category-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = btn.dataset.originalText || 'Add Category';
+            }
+        }
+    }
+
+    /**
+     * Handle deleting a category
+     */
+    async function handleCategoryDelete(e) {
+        const deleteBtn = e.target.closest('.delete-category-btn');
+        if (!deleteBtn) {
+            return;
+        }
+
+        const category = deleteBtn.dataset.category;
+        if (!category) {
+            return;
+        }
+
+        // Confirm deletion
+        if (
+            !UI.confirm(
+                `Delete category "${category}"? Items with this category won't be deleted, just uncategorized.`
+            )
+        ) {
+            return;
+        }
+
+        try {
+            // Show loading state
+            deleteBtn.disabled = true;
+
+            // Delete category via API
+            const result = await Storage.deleteCategory(category);
+
+            // Update state
+            state.categories = result.categories;
+
+            // Refresh UI
+            populateCategoryDropdowns();
+            populateCategoriesManagementUI();
+
+            // Refresh notes app categories
+            if (typeof NotesApp !== 'undefined' && NotesApp.refreshCategories) {
+                await NotesApp.refreshCategories();
+            }
+
+            UI.showToast(`Category "${category}" deleted successfully`, 'success');
+        } catch (error) {
+            UI.showToast(error.message || 'Failed to delete category', 'error');
+        } finally {
+            deleteBtn.disabled = false;
+        }
     }
 
     // ===================================
@@ -963,27 +1183,166 @@
         }
 
         try {
-            const data = await Utils.readJsonFile(file);
-            const result = await Storage.importData(data);
+            // Detect file type and read
+            const { type, data } = await ImportHandler.detectAndReadFile(file);
 
-            if (result.success) {
-                state.lists = await Storage.getLists();
-                state.settings = await Storage.getSettings();
-                UI.populateCategoryFilter(state.lists);
-                UI.populateTagFilter(state.lists);
-                renderLists();
-                UI.updateTheme(state.settings.display.theme);
-                UI.updateViewMode(state.settings.display.view);
-                updateAiButtonVisibility();
-                UI.showToast(result.message, 'success');
+            if (type === 'json') {
+                // Handle JSON import directly
+                const result = await Storage.importData(data);
+
+                if (result.success) {
+                    state.lists = await Storage.getLists();
+                    state.settings = await Storage.getSettings();
+                    UI.populateCategoryFilter(state.lists);
+                    UI.populateTagFilter(state.lists);
+                    renderLists();
+                    UI.updateTheme(state.settings.display.theme);
+                    UI.updateViewMode(state.settings.display.view);
+                    updateAiButtonVisibility();
+                    UI.showToast(result.message, 'success');
+                } else {
+                    UI.showToast(result.message, 'error');
+                }
             } else {
-                UI.showToast(result.message, 'error');
+                // Handle text import - show configuration dialog
+                showTextImportDialog(file, data);
             }
         } catch (error) {
             UI.showToast(error.message || 'Failed to import data', 'error');
         } finally {
             // Reset file input
             e.target.value = '';
+        }
+    }
+
+    async function showTextImportDialog(file, textContent) {
+        // Parse text into items
+        const items = ImportHandler.parseTextContent(textContent);
+
+        if (items.length === 0) {
+            UI.showToast('No items found in text file', 'error');
+            return;
+        }
+
+        // Generate preview
+        const preview = ImportHandler.generatePreview(items);
+
+        // Populate modal
+        const listNameInput = document.getElementById('text-import-list-name');
+        const itemCountSpan = document.getElementById('import-item-count');
+        const previewContainer = document.getElementById('import-preview');
+
+        // Set default list name from filename
+        const defaultName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+        listNameInput.value = defaultName;
+
+        // Populate categories
+        populateTextImportCategories();
+
+        // Show preview
+        previewContainer.innerHTML = preview.preview
+            .map(
+                (item, index) =>
+                    `<div class="preview-item"><span class="preview-index">${index + 1}.</span> ${Utils.sanitizeHtml(item)}</div>`
+            )
+            .join('');
+
+        if (preview.truncated) {
+            previewContainer.innerHTML += `<p class="preview-more">... and ${preview.total - preview.preview.length} more items</p>`;
+        }
+
+        // Update item count
+        itemCountSpan.textContent = preview.total;
+
+        // Store data for confirmation
+        state.pendingTextImport = {
+            items,
+            file
+        };
+
+        // Show modal
+        UI.showModal('text-import-modal');
+    }
+
+    function populateTextImportCategories() {
+        const categorySelect = document.getElementById('text-import-category');
+        const currentValue = categorySelect.value;
+
+        // Remove all options except the first
+        while (categorySelect.options.length > 1) {
+            categorySelect.remove(1);
+        }
+
+        // Add category options
+        state.categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+            categorySelect.appendChild(option);
+        });
+
+        // Restore value if it still exists
+        if (currentValue && state.categories.includes(currentValue)) {
+            categorySelect.value = currentValue;
+        }
+    }
+
+    async function confirmTextImport() {
+        if (!state.pendingTextImport) {
+            return;
+        }
+
+        const listNameInput = document.getElementById('text-import-list-name');
+        const categorySelect = document.getElementById('text-import-category');
+        const prioritySelect = document.getElementById('text-import-priority');
+        const tagsInput = document.getElementById('text-import-tags');
+
+        const listName = listNameInput.value.trim();
+        if (!listName) {
+            UI.showToast('Please enter a list name', 'warning');
+            return;
+        }
+
+        try {
+            // Show loading state
+            const confirmBtn = document.getElementById('text-import-confirm-btn');
+            confirmBtn.disabled = true;
+            confirmBtn.dataset.originalText = confirmBtn.textContent;
+            confirmBtn.textContent = 'Importing...';
+
+            // Convert text to list object
+            const newList = ImportHandler.convertTextToList(state.pendingTextImport.items, {
+                listName,
+                category: categorySelect.value || 'personal',
+                priority: prioritySelect.value || 'none',
+                tags: tagsInput.value,
+                deadline: null
+            });
+
+            // Add list to storage
+            await Storage.addList(newList);
+
+            // Reload data
+            state.lists = await Storage.getLists();
+            state.settings = await Storage.getSettings();
+            UI.populateCategoryFilter(state.lists);
+            UI.populateTagFilter(state.lists);
+            renderLists();
+
+            // Close modal
+            UI.hideModal('text-import-modal');
+            state.pendingTextImport = null;
+
+            UI.showToast(
+                `Successfully imported "${listName}" with ${newList.items.length} item(s)`,
+                'success'
+            );
+        } catch (error) {
+            UI.showToast(error.message || 'Failed to import text file', 'error');
+        } finally {
+            const confirmBtn = document.getElementById('text-import-confirm-btn');
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = confirmBtn.dataset.originalText || 'Import';
         }
     }
 

@@ -286,6 +286,68 @@ main.main-content > .container {
     flex-shrink: 0;
 }
 
+/* Sort Controls */
+.sidebar-sort-controls {
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+    background-color: var(--color-bg-primary);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sort-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.sort-group label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+    padding: 0 0.5rem;
+}
+
+.button-group {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background-color: var(--color-surface);
+}
+
+.sort-btn {
+    flex: 1;
+    padding: 0.4rem 0.6rem;
+    border: none;
+    background-color: transparent;
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast) ease;
+    border-right: 1px solid var(--color-border);
+}
+
+.sort-btn:last-child {
+    border-right: none;
+}
+
+.sort-btn:hover {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+}
+
+.sort-btn.active {
+    background-color: var(--color-primary);
+    color: white;
+}
+
 /* Categories Container */
 .notes-categories {
     flex: 1;

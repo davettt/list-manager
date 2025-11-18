@@ -3,16 +3,20 @@
  * Main application logic for notes management
  */
 
+/* global ImportHandler, NotesStorage */
+
 // eslint-disable-next-line no-unused-vars
 const NotesApp = (() => {
-    // Note categories - single source of truth
-    const NOTE_CATEGORIES = ['personal', 'travel', 'health', 'work', 'projects', 'ideas', 'other'];
+    // Note categories - loaded from API, default fallback
+    let NOTE_CATEGORIES = ['personal', 'travel', 'health', 'work', 'projects', 'ideas', 'other'];
 
     let allNotes = [];
     // eslint-disable-next-line no-unused-vars
     let filteredNotes = [];
     let filterCategory = '';
     let filterFavoritesOnly = false;
+    let noteSortOrder = 'alphabetical'; // 'alphabetical' or 'date'
+    let categorySortOrder = 'alphabetical'; // 'alphabetical' or 'custom'
 
     // DOM elements
     const elements = {
@@ -52,14 +56,35 @@ const NotesApp = (() => {
      * Initialize the notes app
      */
     async function initialize() {
+        // Load categories from API first
+        await loadCategoriesFromAPI();
         setupTabSwitching();
         setupEventListeners();
         populateCategoryDropdown();
         // Restore sidebar state early to prevent visual flashing
         restoreSidebarState();
+        // Set initial button states
+        updateSortButtonStates();
+        updateCategorySortButtonStates();
         // eslint-disable-next-line no-undef
         NotesEditor.initialize();
         await loadNotes();
+    }
+
+    /**
+     * Load categories from API
+     */
+    async function loadCategoriesFromAPI() {
+        try {
+            // eslint-disable-next-line no-undef
+            const categories = await Storage.getCategories();
+            if (categories && categories.length > 0) {
+                NOTE_CATEGORIES = categories;
+            }
+        } catch (error) {
+            console.error('Error loading categories:', error);
+            // Use default categories if loading fails
+        }
     }
 
     /**
@@ -162,6 +187,61 @@ const NotesApp = (() => {
         // Notes footer buttons
         document.getElementById('notes-import-btn')?.addEventListener('click', importNotes);
         document.getElementById('notes-export-btn')?.addEventListener('click', exportNotes);
+
+        // Sort buttons
+        document.getElementById('notes-sort-alpha-btn')?.addEventListener('click', () => {
+            noteSortOrder = 'alphabetical';
+            updateSortButtonStates();
+            filterNotes();
+        });
+
+        document.getElementById('notes-sort-date-btn')?.addEventListener('click', () => {
+            noteSortOrder = 'date';
+            updateSortButtonStates();
+            filterNotes();
+        });
+
+        document.getElementById('notes-sort-category-alpha-btn')?.addEventListener('click', () => {
+            categorySortOrder = 'alphabetical';
+            updateCategorySortButtonStates();
+            filterNotes();
+        });
+
+        document.getElementById('notes-sort-category-custom-btn')?.addEventListener('click', () => {
+            categorySortOrder = 'custom';
+            updateCategorySortButtonStates();
+            filterNotes();
+        });
+    }
+
+    /**
+     * Update sort button active states for notes
+     */
+    function updateSortButtonStates() {
+        const alphaBtn = document.getElementById('notes-sort-alpha-btn');
+        const dateBtn = document.getElementById('notes-sort-date-btn');
+
+        if (alphaBtn) {
+            alphaBtn.classList.toggle('active', noteSortOrder === 'alphabetical');
+        }
+        if (dateBtn) {
+            dateBtn.classList.toggle('active', noteSortOrder === 'date');
+        }
+    }
+
+    /**
+     * Update sort button active states for categories
+     */
+    function updateCategorySortButtonStates() {
+        const alphaBtn = document.getElementById('notes-sort-category-alpha-btn');
+        const customBtn = document.getElementById('notes-sort-category-custom-btn');
+
+        if (alphaBtn) {
+            alphaBtn.classList.toggle('active', categorySortOrder === 'alphabetical');
+        }
+        if (customBtn) {
+            customBtn.classList.toggle('active', categorySortOrder === 'custom');
+        }
     }
 
     /**
@@ -241,11 +321,18 @@ const NotesApp = (() => {
             groups[category].push(note);
         });
 
-        // Sort notes within each category by modified date (most recent first)
+        // Sort notes within each category based on sort order
         Object.keys(groups).forEach(category => {
-            groups[category].sort((a, b) => {
-                return new Date(b.metadata.modified) - new Date(a.metadata.modified);
-            });
+            if (noteSortOrder === 'alphabetical') {
+                groups[category].sort((a, b) => {
+                    return a.title.localeCompare(b.title);
+                });
+            } else {
+                // Sort by modified date (most recent first)
+                groups[category].sort((a, b) => {
+                    return new Date(b.metadata.modified) - new Date(a.metadata.modified);
+                });
+            }
         });
 
         return groups;
@@ -269,7 +356,15 @@ const NotesApp = (() => {
 
         // Group notes by category
         const groupedNotes = groupNotesByCategory(filteredNotes);
-        const categoryOrder = ['personal', 'work', 'projects', 'ideas', 'other'];
+
+        // Sort categories based on sort order
+        let categoryOrder;
+        if (categorySortOrder === 'alphabetical') {
+            categoryOrder = Object.keys(groupedNotes).sort((a, b) => a.localeCompare(b));
+        } else {
+            // Custom order (from API)
+            categoryOrder = NOTE_CATEGORIES.filter(cat => cat in groupedNotes);
+        }
 
         // Render categories
         let html = '';
@@ -572,7 +667,7 @@ const NotesApp = (() => {
     function importNotes() {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.json';
+        input.accept = '.json,.txt,.md';
         input.addEventListener('change', async e => {
             try {
                 const file = e.target.files?.[0];
@@ -586,62 +681,95 @@ const NotesApp = (() => {
                     return;
                 }
 
-                // Validate file type
-                if (!file.type.includes('json') && !file.name.endsWith('.json')) {
-                    showToast('Please select a valid JSON file', 'error');
-                    return;
-                }
+                // Detect file type and read
+                const { type, data } = await ImportHandler.detectAndReadFile(file);
 
-                const text = await file.text();
+                if (type === 'json') {
+                    // Handle JSON import
+                    const importData = data;
 
-                // Validate JSON format
-                let importData;
-                try {
-                    importData = JSON.parse(text);
-                } catch (parseError) {
-                    showToast('Invalid JSON format', 'error');
-                    return;
-                }
+                    // Validate structure
+                    if (!importData.notes || !Array.isArray(importData.notes)) {
+                        showToast('Invalid export format - missing notes array', 'error');
+                        return;
+                    }
 
-                // Validate structure
-                if (!importData.notes || !Array.isArray(importData.notes)) {
-                    showToast('Invalid export format - missing notes array', 'error');
-                    return;
-                }
+                    // Validate note count
+                    if (importData.notes.length === 0) {
+                        showToast('No notes in import file', 'info');
+                        return;
+                    }
 
-                // Validate note count
-                if (importData.notes.length === 0) {
-                    showToast('No notes in import file', 'info');
-                    return;
-                }
+                    if (importData.notes.length > 10000) {
+                        showToast('Too many notes to import (max 10000)', 'error');
+                        return;
+                    }
 
-                if (importData.notes.length > 10000) {
-                    showToast('Too many notes to import (max 10000)', 'error');
-                    return;
-                }
-
-                // Validate that each note has required fields
-                const invalidNotes = importData.notes.filter(
-                    note => !note.id || !note.title || !note.metadata
-                );
-
-                if (invalidNotes.length > 0) {
-                    showToast(
-                        `${invalidNotes.length} notes have invalid format and will be skipped`,
-                        'warning'
+                    // Validate that each note has required fields
+                    const invalidNotes = importData.notes.filter(
+                        note => !note.id || !note.title || !note.metadata
                     );
-                }
 
-                showToast(
-                    `Ready to import ${importData.notes.length - invalidNotes.length} notes. This feature will be implemented soon.`,
-                    'info'
-                );
+                    if (invalidNotes.length > 0) {
+                        showToast(
+                            `${invalidNotes.length} notes have invalid format and will be skipped`,
+                            'warning'
+                        );
+                    }
+
+                    showToast(
+                        `Ready to import ${importData.notes.length - invalidNotes.length} notes. This feature will be implemented soon.`,
+                        'info'
+                    );
+                } else {
+                    // Handle text import - create a single note from the content
+                    const noteTitle = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+                    const noteContent = data.trim();
+
+                    if (!noteContent) {
+                        showToast('File is empty', 'warning');
+                        return;
+                    }
+
+                    try {
+                        const newNote = await NotesStorage.createNote(noteTitle, 'personal', []);
+                        await NotesStorage.updateNote(newNote.id, { content: noteContent });
+
+                        // Fetch the fresh note data from server to ensure all fields are populated
+                        const importedNote = await NotesStorage.getNote(newNote.id);
+                        allNotes.push(importedNote);
+                        filterNotes();
+                        await selectNote(newNote.id);
+                        showToast(`Note "${noteTitle}" imported successfully`, 'success');
+                    } catch (error) {
+                        console.error('Error importing text as note:', error);
+                        showToast('Failed to import text as note', 'error');
+                    }
+                }
             } catch (error) {
                 console.error('Error importing notes:', error);
-                showToast('Failed to import notes', 'error');
+                showToast(error.message || 'Failed to import notes', 'error');
             }
         });
         input.click();
+    }
+
+    /**
+     * Update a note in the local allNotes array
+     */
+    function updateNoteInList(noteId, updatedNote) {
+        const index = allNotes.findIndex(n => n.id === noteId);
+        if (index !== -1) {
+            allNotes[index] = updatedNote;
+        }
+    }
+
+    /**
+     * Refresh categories from API (called when categories change in settings)
+     */
+    async function refreshCategories() {
+        await loadCategoriesFromAPI();
+        populateCategoryDropdown();
     }
 
     /**
@@ -656,6 +784,8 @@ const NotesApp = (() => {
         deleteCurrentNote,
         refreshNotesList,
         populateCategoryDropdown,
+        updateNoteInList,
+        refreshCategories,
         NOTE_CATEGORIES
     };
 })();

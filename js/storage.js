@@ -430,6 +430,72 @@ const Storage = (function () {
     }
 
     /**
+     * Get all valid categories
+     * @returns {Promise<Array>} Array of category names
+     */
+    async function getCategories() {
+        try {
+            const response = await fetch('/api/data/categories');
+            if (!response.ok) {
+                throw new Error('Failed to fetch categories');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error getting categories:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Add a new category
+     * @param {string} name - Category name
+     * @returns {Promise<Object>} Response with success status and updated categories
+     */
+    async function addCategory(name) {
+        try {
+            const response = await fetch('/api/data/categories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to add category');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error adding category:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete a category
+     * @param {string} name - Category name
+     * @returns {Promise<Object>} Response with success status
+     */
+    async function deleteCategory(name) {
+        try {
+            const response = await fetch(`/api/data/categories/${name}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to delete category');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error deleting category:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Get all trashed items
      * @returns {Promise<Array>} Array of trashed items with time remaining
      */
@@ -517,6 +583,9 @@ const Storage = (function () {
         importData,
         clearAllData,
         getStorageInfo,
+        getCategories,
+        addCategory,
+        deleteCategory,
         getTrash,
         restoreFromTrash,
         permanentlyDeleteFromTrash

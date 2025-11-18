@@ -150,6 +150,7 @@ const NOTES_FILE = path.join(DATA_DIR, 'notes.json');
 const NOTES_DIR = path.join(DATA_DIR, 'notes');
 const ENV_FILE = path.join(DATA_DIR, '.env.local');
 const LOCK_FILE = path.join(DATA_DIR, '.lock');
+const CATEGORIES_FILE = path.join(DATA_DIR, 'categories.json');
 
 // Ensure data directories exist
 if (!existsSync(DATA_DIR)) {
@@ -433,9 +434,63 @@ async function cleanupOldTrash() {
     }
 }
 
+// ===================================
+// Category Management (Initialize early)
+// ===================================
+
+let VALID_CATEGORIES = [];
+const VALID_PRIORITIES = ['high', 'medium', 'low'];
+
+/**
+ * Load categories from categories.json file
+ */
+async function loadCategories() {
+    try {
+        if (existsSync(CATEGORIES_FILE)) {
+            const data = await readFile(CATEGORIES_FILE, 'utf-8');
+            VALID_CATEGORIES = JSON.parse(data);
+            console.log(`✓ Loaded ${VALID_CATEGORIES.length} categories from file`);
+        } else {
+            console.warn('Categories file not found, creating with defaults...');
+            VALID_CATEGORIES = [
+                'personal',
+                'work',
+                'travel',
+                'shopping',
+                'projects',
+                'food',
+                'health',
+                'ideas',
+                'other'
+            ];
+            await writeFile(CATEGORIES_FILE, JSON.stringify(VALID_CATEGORIES, null, 2));
+        }
+    } catch (err) {
+        console.error('Error loading categories:', err);
+        VALID_CATEGORIES = ['personal', 'work', 'other']; // Fallback
+    }
+}
+
+/**
+ * Validate category value
+ */
+function isValidCategory(category) {
+    return category && VALID_CATEGORIES.includes(category);
+}
+
+/**
+ * Validate priority value
+ */
+function isValidPriority(priority) {
+    return !priority || VALID_PRIORITIES.includes(priority);
+}
+
 // Initialize trash and clean up on startup
 await initializeTrash();
 await cleanupOldTrash();
+
+// Load categories from file on startup
+await loadCategories();
 
 // ===================================
 // Single Instance Lock
@@ -544,33 +599,6 @@ process.on('exit', () => {
 // ===================================
 // Validation Helpers
 // ===================================
-
-const VALID_CATEGORIES = [
-    'personal',
-    'work',
-    'travel',
-    'shopping',
-    'projects',
-    'food',
-    'health',
-    'other',
-    'ideas'
-];
-const VALID_PRIORITIES = ['high', 'medium', 'low'];
-
-/**
- * Validate category value
- */
-function isValidCategory(category) {
-    return category && VALID_CATEGORIES.includes(category);
-}
-
-/**
- * Validate priority value
- */
-function isValidPriority(priority) {
-    return !priority || VALID_PRIORITIES.includes(priority);
-}
 
 /**
  * Validate tags array
@@ -767,6 +795,108 @@ app.post('/api/data/api-key', async (req, res) => {
     } catch (error) {
         console.error('Error saving API key:', error);
         res.status(500).json({ error: 'Failed to save API key' });
+    }
+});
+
+// ===================================
+// Category Management API
+// ===================================
+
+// Get all valid categories
+app.get('/api/data/categories', async (req, res) => {
+    try {
+        res.json(VALID_CATEGORIES);
+    } catch (error) {
+        console.error('Error reading categories:', error);
+        res.status(500).json({ error: 'Failed to read categories' });
+    }
+});
+
+// Add a new category
+app.post('/api/data/categories', async (req, res) => {
+    try {
+        const { name } = req.body;
+
+        // Validate category name
+        if (!name || typeof name !== 'string') {
+            return res.status(400).json({ error: 'Category name is required' });
+        }
+
+        const trimmedName = name.trim().toLowerCase();
+
+        // Check category name length
+        if (trimmedName.length === 0 || trimmedName.length > 50) {
+            return res.status(400).json({ error: 'Category name must be 1-50 characters' });
+        }
+
+        // Check if category already exists
+        if (VALID_CATEGORIES.includes(trimmedName)) {
+            return res.status(400).json({ error: 'Category already exists' });
+        }
+
+        // Add category
+        VALID_CATEGORIES.push(trimmedName);
+        await writeFile(CATEGORIES_FILE, JSON.stringify(VALID_CATEGORIES, null, 2));
+
+        console.log(`✓ Added category: ${trimmedName}`);
+        res.status(201).json({
+            success: true,
+            category: trimmedName,
+            categories: VALID_CATEGORIES
+        });
+    } catch (error) {
+        console.error('Error adding category:', error);
+        res.status(500).json({ error: 'Failed to add category' });
+    }
+});
+
+// Delete a category
+app.delete('/api/data/categories/:name', async (req, res) => {
+    try {
+        const { name } = req.params;
+        const trimmedName = name.toLowerCase();
+
+        // Check if category exists
+        const index = VALID_CATEGORIES.indexOf(trimmedName);
+        if (index === -1) {
+            return res.status(404).json({ error: 'Category not found' });
+        }
+
+        // Prevent deleting if lists or notes are using this category
+        let listsFile = null;
+        let notesFile = null;
+
+        if (existsSync(LISTS_FILE)) {
+            const data = await readFile(LISTS_FILE, 'utf-8');
+            const lists = JSON.parse(data);
+            listsFile = lists.some(list => list.category === trimmedName);
+        }
+
+        if (existsSync(NOTES_FILE)) {
+            const data = await readFile(NOTES_FILE, 'utf-8');
+            const notes = JSON.parse(data);
+            notesFile = notes.some(note => note.category === trimmedName);
+        }
+
+        if (listsFile || notesFile) {
+            return res.status(400).json({
+                error: 'Cannot delete category that is in use',
+                inUse: {
+                    lists: listsFile,
+                    notes: notesFile
+                }
+            });
+        }
+
+        // Delete category
+        VALID_CATEGORIES.splice(index, 1);
+        await writeFile(CATEGORIES_FILE, JSON.stringify(VALID_CATEGORIES, null, 2));
+
+        console.log(`✓ Deleted category: ${trimmedName}`);
+        res.json({ success: true, categories: VALID_CATEGORIES });
+    } catch (error) {
+        console.error('Error deleting category:', error);
+        res.status(500).json({ error: 'Failed to delete category' });
     }
 });
 

@@ -9,8 +9,13 @@
         />
         <title>List + Note Manager</title>
 
-        <!-- Favicon -->
-        <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+        <!-- Favicon & PWA Icons -->
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#ffffff" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="light" />
 
         <!-- Styles -->
         <link rel="stylesheet" href="styles/themes.css" />
@@ -225,6 +230,64 @@
                                 <circle cx="11" cy="11" r="8"></circle>
                                 <path d="m21 21-4.35-4.35"></path>
                             </svg>
+                        </div>
+
+                        <!-- Sort Controls -->
+                        <div class="sidebar-sort-controls">
+                            <div class="sort-group">
+                                <label
+                                    style="
+                                        font-size: 0.75rem;
+                                        color: var(--color-text-muted);
+                                        display: block;
+                                        margin-bottom: 0.25rem;
+                                    "
+                                    >Notes</label
+                                >
+                                <div class="button-group">
+                                    <button
+                                        id="notes-sort-alpha-btn"
+                                        class="sort-btn active"
+                                        title="Sort notes alphabetically"
+                                    >
+                                        A-Z
+                                    </button>
+                                    <button
+                                        id="notes-sort-date-btn"
+                                        class="sort-btn"
+                                        title="Sort notes by date modified"
+                                    >
+                                        Date
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="sort-group">
+                                <label
+                                    style="
+                                        font-size: 0.75rem;
+                                        color: var(--color-text-muted);
+                                        display: block;
+                                        margin-bottom: 0.25rem;
+                                    "
+                                    >Categories</label
+                                >
+                                <div class="button-group">
+                                    <button
+                                        id="notes-sort-category-alpha-btn"
+                                        class="sort-btn active"
+                                        title="Sort categories alphabetically"
+                                    >
+                                        A-Z
+                                    </button>
+                                    <button
+                                        id="notes-sort-category-custom-btn"
+                                        class="sort-btn"
+                                        title="Sort categories by custom order"
+                                    >
+                                        Custom
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Category Groups (will be rendered by JavaScript) -->
@@ -653,14 +716,7 @@
                         <div class="metadata-row">
                             <select id="list-category-input" aria-label="Category">
                                 <option value="">No Category</option>
-                                <option value="personal">Personal</option>
-                                <option value="work">Work</option>
-                                <option value="travel">Travel</option>
-                                <option value="shopping">Shopping</option>
-                                <option value="projects">Projects</option>
-                                <option value="food">Food</option>
-                                <option value="health">Health</option>
-                                <option value="other">Other</option>
+                                <!-- Categories will be populated from API -->
                             </select>
 
                             <select id="list-priority-input" aria-label="Priority">
@@ -860,6 +916,37 @@
                         </div>
                     </section>
 
+                    <!-- Category Management -->
+                    <section class="settings-section">
+                        <h3>Manage Categories</h3>
+                        <p class="help-text">Add custom categories for your lists and notes</p>
+
+                        <!-- Add New Category -->
+                        <div class="category-add-form">
+                            <input
+                                type="text"
+                                id="new-category-input"
+                                placeholder="Enter new category name"
+                                maxlength="50"
+                                aria-label="New category name"
+                            />
+                            <button id="add-category-btn" class="btn btn-secondary">
+                                Add Category
+                            </button>
+                        </div>
+
+                        <!-- Existing Categories List -->
+                        <div class="categories-list">
+                            <h4>Current Categories</h4>
+                            <ul id="categories-ul" class="categories-items">
+                                <!-- Categories will be populated here -->
+                            </ul>
+                            <p class="help-text" id="no-categories-msg" hidden>
+                                No categories found. Add one to get started!
+                            </p>
+                        </div>
+                    </section>
+
                     <!-- About -->
                     <section class="settings-section">
                         <h3>About</h3>
@@ -943,7 +1030,103 @@
         <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
         <!-- Hidden File Input for Import -->
-        <input type="file" id="file-input" accept=".json" style="display: none" />
+        <input type="file" id="file-input" accept=".json,.txt,.md" style="display: none" />
+
+        <!-- Text Import Configuration Modal -->
+        <div
+            id="text-import-modal"
+            class="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="text-import-title"
+            style="display: none"
+        >
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="text-import-title">Import Text File</h2>
+                    <button id="text-import-close-btn" class="icon-btn" aria-label="Close">
+                        <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- File Preview -->
+                    <div class="import-preview-section">
+                        <h3>Preview</h3>
+                        <div id="import-preview" class="import-preview">
+                            <!-- Items preview will be rendered here -->
+                        </div>
+                    </div>
+
+                    <!-- Import Configuration -->
+                    <div class="import-config-section">
+                        <h3>Configuration</h3>
+
+                        <div class="form-group">
+                            <label for="text-import-list-name">List Name</label>
+                            <input
+                                type="text"
+                                id="text-import-list-name"
+                                placeholder="e.g., My Imported List"
+                                maxlength="75"
+                                aria-label="List name"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="text-import-category">Category</label>
+                            <select id="text-import-category" aria-label="Category">
+                                <option value="">No Category</option>
+                                <!-- Categories will be populated from API -->
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="text-import-priority">Priority</label>
+                            <select id="text-import-priority" aria-label="Priority">
+                                <option value="none">No Priority</option>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="text-import-tags">Tags (comma-separated)</label>
+                            <input
+                                type="text"
+                                id="text-import-tags"
+                                placeholder="e.g., work, important"
+                                aria-label="Tags"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- Import Stats -->
+                    <div class="import-stats">
+                        <p><strong id="import-item-count">0</strong> items will be imported</p>
+                    </div>
+
+                    <!-- Modal Actions -->
+                    <div class="modal-actions">
+                        <button id="text-import-cancel-btn" class="btn btn-secondary">
+                            Cancel
+                        </button>
+                        <button id="text-import-confirm-btn" class="btn btn-primary">Import</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Markdown library (for preview rendering) -->
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -955,6 +1138,7 @@
         <script src="js/utils.js"></script>
         <script src="js/storage.js"></script>
         <script src="js/ui-helpers.js"></script>
+        <script src="js/import-handler.js"></script>
         <script src="js/claude-api.js"></script>
         <script src="js/notes-storage.js"></script>
         <script src="js/notes-editor.js"></script>

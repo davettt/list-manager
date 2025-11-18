@@ -179,13 +179,23 @@ const NotesEditor = (() => {
             const title = elements.titleInput().value;
             const category = elements.categorySelect().value;
             const favorite = elements.favoriteCheckbox().checked;
+            const content = elements.textarea().value;
 
             // eslint-disable-next-line no-undef
-            await NotesStorage.updateNote(state.currentNoteId, {
+            const updatedNote = await NotesStorage.updateNote(state.currentNoteId, {
                 title,
                 category,
-                favorite
+                favorite,
+                content
             });
+
+            // Update the note in NotesApp's allNotes array if available
+            // eslint-disable-next-line no-undef
+            if (typeof NotesApp !== 'undefined' && NotesApp.updateNoteInList) {
+                // eslint-disable-next-line no-undef
+                NotesApp.updateNoteInList(state.currentNoteId, updatedNote);
+            }
+
             updateStatus('Metadata saved');
             // Refresh the notes list to update the note card with new metadata
             // eslint-disable-next-line no-undef
