@@ -5,6 +5,27 @@ All notable changes to List Manager are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Upcoming
+
+### Under Consideration
+- **AI: Habit Builder** - Generate actionable habits or behavior changes based on productivity notes (may be contextual)
+- **AI: Think Deeper** - Additional analysis options to challenge and expand thinking on specific note types
+- **Performance**: Explore lighter weight AI models or caching for frequent queries
+
+---
+
+## [1.6.0] - 2025-11-30
+
+### Added
+- 🔄 **AI: Consider the Opposite** - Generate opposing viewpoints to challenge thinking and explore alternative perspectives
+- Brief, accessible counter-arguments (1-3 sentences each) for critical thinking
+- Works with all note types and AI providers
+
+### Changed
+- AI prompts now use neutral English regardless of user locale to maintain consistency
+
+---
+
 ## [1.5.0] - 2025-11-30
 
 ### Added

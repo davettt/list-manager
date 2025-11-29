@@ -129,8 +129,9 @@ pm2 delete list-manager     # Remove from PM2
 
 **AI Writing Assistance for Notes:**
 - Click "TLDR" button to generate a concise summary of your note
+- Click "Opposite" button to generate opposing viewpoints and challenge your thinking
 - Click "Grammar" button to check spelling and get writing suggestions
-- AI results are shown in a modal for easy review
+- AI results are shown in a modal for easy review and can be copied or inserted into your note
 
 **Export Notes:**
 - Click "Export PDF" to download a single note as a PDF file
@@ -575,10 +576,14 @@ Built with:
 
 ---
 
-**Version**: 1.5.0
+**Version**: 1.6.0
 **Last Updated**: 2025-11-30
 
 Made with care for people who value privacy and simplicity.
+
+### What's New in v1.6.0
+
+**Consider the Opposite** - Generate opposing viewpoints to challenge your thinking. Brief, thought-provoking counter-arguments help you explore alternative perspectives on your notes.
 
 ### What's New in v1.5.0
 

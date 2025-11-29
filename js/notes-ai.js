@@ -965,11 +965,119 @@ ${chunkText}`;
     }
 
     /**
+     * Generate opposing viewpoints for critical thinking
+     * @param {string} noteId - Note ID
+     * @param {string} content - Note content
+     */
+    async function generateOpposite(noteId, content) {
+        if (!content.trim()) {
+            alert('Note is empty. Nothing to analyze.');
+            return;
+        }
+
+        if (state.isAnalyzing) {
+            alert('Analysis in progress. Please wait.');
+            return;
+        }
+
+        state.isAnalyzing = true;
+        // eslint-disable-next-line no-undef
+        NotesEditor.updateStatus('Generating opposing viewpoints...');
+
+        // Show loading modal immediately
+        const loadingModal = showLoadingModal('Generating opposing viewpoints...');
+
+        try {
+            const { provider } = await getAISettings();
+
+            // Use neutral English for consistency, not user's language variant
+            const prompt = `Consider the opposite perspective or viewpoint from the following note. Generate 2-3 brief counter-arguments that challenge the main ideas. Keep each point to 1-3 sentences - clear and straightforward. Focus on questioning assumptions and exploring alternative angles:\n\n${content}`;
+
+            const opposite = await makeProxyApiCall(prompt, provider);
+
+            if (!opposite || !opposite.trim()) {
+                throw new Error('No viewpoints generated');
+            }
+
+            // Close loading modal and show result
+            if (loadingModal) {
+                loadingModal.remove();
+            }
+            showOppositeModal(opposite);
+
+            // eslint-disable-next-line no-undef
+            NotesEditor.updateStatus('Opposing viewpoints generated');
+        } catch (error) {
+            console.error('Error generating opposite viewpoints:', error);
+            // eslint-disable-next-line no-undef
+            NotesEditor.updateStatus('Error generating viewpoints');
+            if (loadingModal) {
+                loadingModal.remove();
+            }
+            alert(`Error: ${error.message}`);
+        } finally {
+            state.isAnalyzing = false;
+        }
+    }
+
+    /**
+     * Show opposing viewpoints modal
+     */
+    function showOppositeModal(opposite) {
+        const modal = document.createElement('div');
+        modal.className = 'ai-modal';
+        modal.innerHTML = `
+            <div class="ai-modal-content">
+                <div class="ai-modal-header">
+                    <h3>Opposing Viewpoints</h3>
+                    <button class="ai-modal-close-icon" aria-label="Close">&times;</button>
+                </div>
+                <div class="ai-modal-body">
+                    <p>${Utils.sanitizeHtml(opposite)}</p>
+                </div>
+                <div class="ai-modal-footer">
+                    <button class="btn btn-secondary ai-modal-copy">Copy</button>
+                    <button class="btn btn-primary ai-modal-insert">Insert at End</button>
+                    <button class="btn btn-secondary ai-modal-close">Close</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const closeIconBtn = modal.querySelector('.ai-modal-close-icon');
+        const closeBtn = modal.querySelector('.ai-modal-close');
+        const copyBtn = modal.querySelector('.ai-modal-copy');
+        const insertBtn = modal.querySelector('.ai-modal-insert');
+
+        // Handle close buttons
+        if (closeIconBtn) {
+            closeIconBtn.addEventListener('click', () => modal.remove());
+        }
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => modal.remove());
+        }
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(opposite);
+            alert('Viewpoints copied to clipboard');
+        });
+        insertBtn.addEventListener('click', () => {
+            const textarea = document.getElementById('note-content-textarea');
+            textarea.value = `${textarea.value}\n\n**Alternative Perspectives:**\n${opposite}`;
+            modal.remove();
+            // Trigger input event to update preview
+            // eslint-disable-next-line no-undef
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+    }
+
+    /**
      * Public API
      */
     return {
         generateTLDR,
-        checkGrammar
+        checkGrammar,
+        generateOpposite
     };
 })();
 
@@ -977,6 +1085,7 @@ ${chunkText}`;
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         const tldrBtn = document.getElementById('note-ai-tldr-btn');
+        const oppositeBtn = document.getElementById('note-ai-opposite-btn');
         const grammarBtn = document.getElementById('note-ai-grammar-btn');
 
         if (tldrBtn) {
@@ -987,6 +1096,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (noteId && content) {
                     // eslint-disable-next-line no-undef
                     NotesAI.generateTLDR(noteId, content);
+                }
+            });
+        }
+
+        if (oppositeBtn) {
+            oppositeBtn.addEventListener('click', () => {
+                // eslint-disable-next-line no-undef
+                const noteId = NotesEditor.getCurrentNoteId();
+                const content = document.getElementById('note-content-textarea').value;
+                if (noteId && content) {
+                    // eslint-disable-next-line no-undef
+                    NotesAI.generateOpposite(noteId, content);
                 }
             });
         }
