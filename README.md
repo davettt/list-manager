@@ -582,15 +582,9 @@ Made with care for people who value privacy and simplicity.
 
 ### What's New in v1.5.0
 
-**Note Export Improvements:**
-- 📄 **PDF Export for Notes** - Export individual notes to PDF with beautiful formatting
-- 🎨 **Styled PDFs** - Full markdown support with proper typography, code blocks, tables, and blockquotes
-- 📊 **Optional Metadata** - Include note details (category, dates, word count, tags) in PDF
-- 🔒 **Security Updates** - SSL certificates and private keys now properly excluded from git
+**PDF Export for Notes** - Export individual notes to PDF with formatted styling and optional metadata. Enhanced security with proper SSL/TLS certificate handling.
 
-**Improvements:**
-- Enhanced export options for notes (Markdown and PDF)
-- Better file organization with proper gitignore rules
+See [CHANGELOG.md](CHANGELOG.md) for full release details.
 
 ### What's New in v1.4.0
 
