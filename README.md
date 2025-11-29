@@ -17,6 +17,7 @@ A simple, fast, and private tool that stores your data locally on your computer.
   - Grammar and spelling checking for notes
   - Supports Claude, ChatGPT, or Gemini (use your own API key)
 - **Export/Import**: Backup your data anytime as JSON files
+- **PDF Export for Notes**: Export individual notes to PDF with formatted styling and optional metadata
 - **Light & Dark Themes**: Choose your preferred theme or use system settings
 - **Mobile Friendly**: Responsive design works on all devices
 - **Cloud Backup**: Notes stored as markdown files, easily backed up to any cloud service (Tresorit, Dropbox, Google Drive, etc.)
@@ -130,6 +131,12 @@ pm2 delete list-manager     # Remove from PM2
 - Click "TLDR" button to generate a concise summary of your note
 - Click "Grammar" button to check spelling and get writing suggestions
 - AI results are shown in a modal for easy review
+
+**Export Notes:**
+- Click "Export PDF" to download a single note as a PDF file
+- PDFs include formatted styling (headers, lists, code blocks, tables)
+- Optionally include metadata (category, creation date, word count, tags)
+- Perfect for printing, sharing, or archiving important notes
 
 **Export Your Data:**
 - Click "Export All" to download your data as JSON
@@ -568,10 +575,22 @@ Built with:
 
 ---
 
-**Version**: 1.4.0
-**Last Updated**: 2025-11-08
+**Version**: 1.5.0
+**Last Updated**: 2025-11-30
 
 Made with care for people who value privacy and simplicity.
+
+### What's New in v1.5.0
+
+**Note Export Improvements:**
+- 📄 **PDF Export for Notes** - Export individual notes to PDF with beautiful formatting
+- 🎨 **Styled PDFs** - Full markdown support with proper typography, code blocks, tables, and blockquotes
+- 📊 **Optional Metadata** - Include note details (category, dates, word count, tags) in PDF
+- 🔒 **Security Updates** - SSL certificates and private keys now properly excluded from git
+
+**Improvements:**
+- Enhanced export options for notes (Markdown and PDF)
+- Better file organization with proper gitignore rules
 
 ### What's New in v1.4.0
 

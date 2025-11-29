@@ -36,3 +36,11 @@ build/
 # User data (local storage)
 local_data/
 !local_data/.gitkeep
+
+# SSL/TLS certificates and keys (sensitive)
+*.crt
+*.key
+*.pem
+
+# Exported PDFs and other exports
+*.pdf

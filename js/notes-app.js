@@ -172,6 +172,47 @@ const NotesApp = (() => {
             deleteBtn.addEventListener('click', deleteCurrentNote);
         }
 
+        // PDF export button
+        const pdfExportBtn = document.getElementById('note-export-pdf-btn');
+        if (pdfExportBtn) {
+            pdfExportBtn.addEventListener('click', showPdfExportModal);
+        }
+
+        // PDF export modal buttons
+        const pdfExportModal = document.getElementById('pdf-export-modal');
+        const pdfExportCloseBtn = document.getElementById('pdf-export-close-btn');
+        const pdfExportCancelBtn = document.getElementById('pdf-export-cancel-btn');
+        const pdfExportConfirmBtn = document.getElementById('pdf-export-confirm-btn');
+
+        if (pdfExportCloseBtn) {
+            pdfExportCloseBtn.addEventListener('click', () => {
+                if (pdfExportModal) {
+                    pdfExportModal.style.display = 'none';
+                }
+            });
+        }
+
+        if (pdfExportCancelBtn) {
+            pdfExportCancelBtn.addEventListener('click', () => {
+                if (pdfExportModal) {
+                    pdfExportModal.style.display = 'none';
+                }
+            });
+        }
+
+        if (pdfExportConfirmBtn) {
+            pdfExportConfirmBtn.addEventListener('click', exportCurrentNoteToPdf);
+        }
+
+        // Close modal when clicking outside
+        if (pdfExportModal) {
+            pdfExportModal.addEventListener('click', e => {
+                if (e.target === pdfExportModal) {
+                    pdfExportModal.style.display = 'none';
+                }
+            });
+        }
+
         // Sidebar toggle button
         const sidebarToggle = document.getElementById('notes-sidebar-toggle');
         if (sidebarToggle) {
@@ -572,6 +613,178 @@ const NotesApp = (() => {
             // eslint-disable-next-line no-undef
             UI.showToast('Error deleting note', 'error');
         }
+    }
+
+    /**
+     * Show PDF export options modal
+     */
+    function showPdfExportModal() {
+        // eslint-disable-next-line no-undef
+        const noteId = NotesEditor.getCurrentNoteId();
+        if (!noteId) {
+            // eslint-disable-next-line no-undef
+            UI.showToast('Please select a note first', 'error');
+            return;
+        }
+
+        const pdfExportModal = document.getElementById('pdf-export-modal');
+        if (pdfExportModal) {
+            pdfExportModal.style.display = 'flex';
+        }
+    }
+
+    /**
+     * Export current note to PDF
+     */
+    async function exportCurrentNoteToPdf() {
+        // eslint-disable-next-line no-undef
+        const noteId = NotesEditor.getCurrentNoteId();
+        if (!noteId) {
+            // eslint-disable-next-line no-undef
+            UI.showToast('Please select a note first', 'error');
+            return;
+        }
+
+        const includeMetadataCheckbox = document.getElementById('pdf-include-metadata');
+        const includeMetadata = includeMetadataCheckbox ? includeMetadataCheckbox.checked : true;
+
+        const pdfExportModal = document.getElementById('pdf-export-modal');
+        if (pdfExportModal) {
+            pdfExportModal.style.display = 'none';
+        }
+
+        try {
+            console.log('Starting PDF export for note:', noteId);
+
+            // Get note info for filename
+            const note = allNotes.find(n => n.id === noteId);
+            if (!note) {
+                // eslint-disable-next-line no-undef
+                UI.showToast('Note not found', 'error');
+                return;
+            }
+
+            // Generate curl command
+            const createdDate = new Date(note.metadata.created)
+                .toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                })
+                .replace(/\//g, '-');
+            const filename = `${note.title}_${createdDate}.pdf`.replace(/[^a-z0-9._-]/gi, '_');
+
+            const protocol = window.location.protocol;
+            const host = window.location.host;
+            const apiUrl = `${protocol}//${host}/api/export/note/${noteId}/pdf?includeMetadata=${includeMetadata}`;
+            const curlCommand = `curl -o "${filename}" "${apiUrl}"`;
+
+            // Show curl command in a modal
+            showCurlCommandModal(curlCommand, filename);
+        } catch (error) {
+            console.error('Error exporting note to PDF:', error);
+            // eslint-disable-next-line no-undef
+            UI.showToast('Error exporting PDF: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * Show curl command in a modal
+     */
+    function showCurlCommandModal(curlCommand, filename) {
+        // Create a custom modal to show the command better
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.style.display = 'flex';
+        modal.id = 'curl-command-modal';
+
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 600px; background: white;">
+                <div class="modal-header">
+                    <h2>Download PDF via Terminal</h2>
+                    <button class="icon-btn" id="curl-close-btn">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom: 15px; color: #333;">Copy this command and run it in your terminal to download the PDF:</p>
+                    <div style="background: #f5f5f5; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #ddd;">
+                        <code style="word-break: break-all; font-family: monospace; font-size: 12px; color: #000; display: block; white-space: pre-wrap;" id="curl-command-text">${curlCommand}</code>
+                    </div>
+                    <p style="color: #666; font-size: 13px; margin-bottom: 15px;">The file will be saved as: <strong>${filename}</strong></p>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="curl-cancel-btn">Close</button>
+                        <button class="btn btn-primary" id="curl-copy-btn">Copy Command</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Add event listeners
+        document.getElementById('curl-close-btn').addEventListener('click', () => {
+            modal.style.display = 'none';
+            setTimeout(() => modal.remove(), 300);
+        });
+
+        document.getElementById('curl-cancel-btn').addEventListener('click', () => {
+            modal.style.display = 'none';
+            setTimeout(() => modal.remove(), 300);
+        });
+
+        document.getElementById('curl-copy-btn').addEventListener('click', () => {
+            try {
+                // Try using the modern Clipboard API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard
+                        .writeText(curlCommand)
+                        .then(() => {
+                            // eslint-disable-next-line no-undef
+                            UI.showToast('Curl command copied to clipboard!', 'success');
+                        })
+                        .catch(() => {
+                            fallbackCopy();
+                        });
+                } else {
+                    fallbackCopy();
+                }
+            } catch (err) {
+                fallbackCopy();
+            }
+
+            function fallbackCopy() {
+                // Fallback: select and copy manually
+                const textElement = document.getElementById('curl-command-text');
+                const range = document.createRange();
+                range.selectNodeContents(textElement);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                try {
+                    document.execCommand('copy');
+                    // eslint-disable-next-line no-undef
+                    UI.showToast('Curl command copied to clipboard!', 'success');
+                } catch (err) {
+                    // eslint-disable-next-line no-undef
+                    UI.showToast('Please copy the command manually', 'warning');
+                }
+            }
+        });
+
+        // Close when clicking outside
+        modal.addEventListener('click', e => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                setTimeout(() => modal.remove(), 300);
+            }
+        });
+
+        // eslint-disable-next-line no-undef
+        UI.showToast('PDF download command ready - check the modal', 'success');
     }
 
     /**

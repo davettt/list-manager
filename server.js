@@ -10,12 +10,16 @@
 
 import express from 'express';
 import cors from 'cors';
+import https from 'https';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { readFile, writeFile, mkdir, readdir, unlink } from 'fs/promises';
-import { existsSync, unlinkSync } from 'fs';
+import { existsSync, unlinkSync, readFileSync } from 'fs';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
+import PDFDocument from 'pdfkit';
+import { marked } from 'marked';
+import puppeteer from 'puppeteer';
 
 // Load environment variables from local_data/.env.local (user's keys)
 dotenv.config({
@@ -1158,6 +1162,179 @@ app.delete('/api/data/notes/:id', async (req, res) => {
         res.status(500).json({ error: 'Failed to delete note' });
     }
 });
+
+// Export note to PDF (GET or POST)
+app.get('/api/export/note/:id/pdf', handlePdfExport);
+app.post('/api/export/note/:id/pdf', handlePdfExport);
+
+async function handlePdfExport(req, res) {
+    let browser;
+    try {
+        const { id } = req.params;
+        // Support both JSON body and form data/query params
+        let includeMetadata = true;
+        if (req.body && typeof req.body.includeMetadata !== 'undefined') {
+            includeMetadata =
+                req.body.includeMetadata !== 'false' && req.body.includeMetadata !== false;
+        }
+        if (req.query && typeof req.query.includeMetadata !== 'undefined') {
+            includeMetadata =
+                req.query.includeMetadata !== 'false' && req.query.includeMetadata !== false;
+        }
+
+        // Validate ID format
+        if (!id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            console.warn('Invalid note ID format:', id);
+            return res.status(400).json({ error: 'Invalid note ID' });
+        }
+
+        // Get note metadata and content
+        if (!existsSync(NOTES_FILE)) {
+            console.warn('Notes file does not exist');
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        const data = await readFile(NOTES_FILE, 'utf-8');
+        const notes = JSON.parse(data);
+        const note = notes.find(n => n.id === id);
+
+        if (!note) {
+            console.warn('Note not found with ID:', id);
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        // Get content - support both new and old filename formats
+        const newFilename = buildNoteFilename(note.title, id);
+        let noteFile = path.join(NOTES_DIR, `${newFilename}.md`);
+        let content = '';
+
+        // Try new format first, fall back to old format if it doesn't exist
+        if (!existsSync(noteFile)) {
+            noteFile = path.join(NOTES_DIR, `${id}.md`);
+        }
+
+        if (existsSync(noteFile)) {
+            content = await readFile(noteFile, 'utf-8');
+        }
+
+        // Render markdown to HTML with marked
+        const contentHtml = marked.parse(content);
+
+        // Build metadata HTML
+        let metadataHtml = '';
+        if (includeMetadata) {
+            const createdDateLong = new Date(note.metadata.created).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            const modifiedDateLong = new Date(note.metadata.modified).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            metadataHtml = `
+                <div style="margin-bottom: 1em; color: #666; font-size: 0.9em;">
+                    <p><strong>Category:</strong> ${note.category}</p>
+                    <p><strong>Created:</strong> ${createdDateLong}</p>
+                    <p><strong>Modified:</strong> ${modifiedDateLong}</p>
+                    <p><strong>Word Count:</strong> ${note.metadata.wordCount}</p>
+                    ${note.tags && note.tags.length > 0 ? `<p><strong>Tags:</strong> ${note.tags.join(', ')}</p>` : ''}
+                </div>
+                <hr style="margin: 1em 0; border: none; border-top: 1px solid #ccc;">
+            `;
+        }
+
+        // Create HTML page
+        const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>${note.title}</title>
+                <style>
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                        padding: 0;
+                        margin: 0;
+                        background: white;
+                    }
+                    h1, h2, h3, h4, h5, h6 { font-weight: bold; margin: 0.5em 0; }
+                    h1 { font-size: 2em; }
+                    h2 { font-size: 1.5em; }
+                    h3 { font-size: 1.25em; }
+                    h4 { font-size: 1.1em; }
+                    p { margin: 0.5em 0; }
+                    ul, ol { margin: 0.5em 0; padding-left: 2em; }
+                    li { margin: 0.3em 0; }
+                    table { border-collapse: collapse; width: 100%; margin: 0.5em 0; }
+                    th, td { border: 1px solid #ddd; padding: 0.5em; text-align: left; vertical-align: top; }
+                    th { background-color: #f5f5f5; font-weight: bold; }
+                    tr:nth-child(even) { background-color: #fafafa; }
+                    strong { font-weight: bold; }
+                    em { font-style: italic; }
+                    code { background-color: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px; font-family: monospace; font-size: 0.9em; }
+                    pre { background-color: #f5f5f5; padding: 1em; border-radius: 5px; margin: 0.5em 0; overflow-x: auto; }
+                    pre code { background: none; padding: 0; }
+                    blockquote { border-left: 4px solid #ddd; padding-left: 1em; margin: 0.5em 0; color: #666; }
+                    .note-title { font-size: 2.5em; font-weight: bold; margin-bottom: 0.3em; }
+                </style>
+            </head>
+            <body>
+                <div class="note-title">${note.title}</div>
+                ${metadataHtml}
+                <div class="content">${contentHtml}</div>
+            </body>
+            </html>
+        `;
+
+        // Set response headers
+        const createdDate = new Date(note.metadata.created)
+            .toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            })
+            .replace(/\//g, '-');
+        const filename = `${note.title}_${createdDate}.pdf`.replace(/[^a-z0-9._-]/gi, '_');
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+        browser = await puppeteer.launch({ headless: true });
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' }
+        });
+
+        if (!pdfBuffer || pdfBuffer.length === 0) {
+            throw new Error('Generated PDF buffer is empty');
+        }
+
+        res.end(pdfBuffer);
+        await browser.close();
+    } catch (error) {
+        console.error('Error exporting note to PDF:', error);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Failed to export note to PDF' });
+        }
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+    }
+}
 
 // Save note backup (before grammar updates)
 app.post('/api/data/notes/:id/backup', async (req, res) => {

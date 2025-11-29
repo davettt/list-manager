@@ -181,6 +181,46 @@ const NotesStorage = (() => {
         },
 
         /**
+         * Export note to PDF
+         * @param {string} id - Note ID
+         * @param {boolean} includeMetadata - Whether to include metadata in PDF (default: true)
+         */
+        async exportNoteToPdf(id, includeMetadata = true) {
+            try {
+                const url = '/api/export/note/' + id + '/pdf';
+                console.log('Calling PDF export API:', url);
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ includeMetadata })
+                });
+
+                console.log('PDF API response status:', response.status);
+                console.log('PDF API response headers:', {
+                    contentType: response.headers.get('content-type'),
+                    contentDisposition: response.headers.get('content-disposition')
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('PDF API error response:', errorText);
+                    throw new Error(
+                        `Failed to export note to PDF: ${response.status} ${response.statusText}`
+                    );
+                }
+
+                // Return blob for download handling
+                const blob = await response.blob();
+                console.log('PDF blob created, size:', blob.size, 'type:', blob.type);
+                return blob;
+            } catch (error) {
+                console.error('Error exporting note to PDF:', error);
+                throw error;
+            }
+        },
+
+        /**
          * Get all trashed items
          * @returns {Promise<Array>} Array of trashed items with time remaining
          */

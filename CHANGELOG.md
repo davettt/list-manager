@@ -5,6 +5,28 @@ All notable changes to List Manager are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2025-11-30
+
+### Added
+- 📄 **PDF Export for Notes** - Export individual notes to PDF with formatted styling and optional metadata
+- 🎨 **PDF Styling** - Properly formatted PDFs with typography, code blocks, tables, blockquotes, and more
+- 📊 **Metadata in PDF** - Option to include note metadata (category, creation date, word count, tags) in exported PDF
+- 🔒 **Security: SSL Certificate Handling** - Updated gitignore to exclude SSL/TLS certificates and private keys
+
+### Changed
+- 📋 **Enhanced Export Options** - Notes can now be exported in multiple formats (Markdown, PDF)
+
+### Security
+- 🔐 **SSL/TLS Protection** - Private key files (*.key) and certificates (*.crt, *.pem) now properly excluded from version control
+- 📄 **Generated Files** - PDF exports excluded from git tracking (*.pdf)
+
+### Notes
+- This release maintains full backward compatibility with v1.4.0
+- No database migrations needed
+- All existing data works as-is
+
+---
+
 ## [1.4.0] - 2025-11-08
 
 ### Added
