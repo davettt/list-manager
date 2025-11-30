@@ -14,6 +14,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.0] - 2025-12-01
+
+### Added
+- ✨ **AI: Improve Writing** - New writing enhancement tool that restructures, clarifies, and polishes notes while maintaining original voice
+- Improves clarity with precise language and better organization
+- Adds concrete examples where helpful to illustrate key points
+- Works with all AI providers (Claude, ChatGPT, Gemini)
+- 🎯 **Unified AI Menu** - All 4 AI writing tools now accessible from single "AI Options" dropdown menu
+- Cleaner interface with organized dropdown options for Grammar, TLDR, Opposite, and Improve Writing
+
+### Changed
+- Consolidated AI buttons into single dropdown menu for better UX
+- Updated button icon to three-dot menu (more intuitive)
+- Updated tooltip text to reflect all writing tools
+
+### Improved
+- Better visual organization of AI features
+- Reduced UI clutter with dropdown approach
+
+---
+
 ## [1.6.0] - 2025-11-30
 
 ### Added

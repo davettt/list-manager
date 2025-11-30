@@ -15,6 +15,8 @@ A simple, fast, and private tool that stores your data locally on your computer.
   - Get item suggestions for lists
   - Generate TLDR summaries for notes
   - Grammar and spelling checking for notes
+  - Improve writing - restructure and clarify notes
+  - Generate opposing viewpoints for critical thinking
   - Supports Claude, ChatGPT, or Gemini (use your own API key)
 - **Export/Import**: Backup your data anytime as JSON files
 - **PDF Export for Notes**: Export individual notes to PDF with formatted styling and optional metadata
@@ -128,9 +130,11 @@ pm2 delete list-manager     # Remove from PM2
 - Search notes by title or category
 
 **AI Writing Assistance for Notes:**
-- Click "TLDR" button to generate a concise summary of your note
-- Click "Opposite" button to generate opposing viewpoints and challenge your thinking
-- Click "Grammar" button to check spelling and get writing suggestions
+- Click "AI Options" dropdown button to access 4 writing assistance tools:
+  - **TLDR** - Generate a concise summary of your note
+  - **Grammar** - Check spelling and get writing suggestions
+  - **Opposite** - Generate opposing viewpoints and challenge your thinking
+  - **Improve Writing** - Restructure and clarify your note for better clarity
 - AI results are shown in a modal for easy review and can be copied or inserted into your note
 
 **Export Notes:**
@@ -576,10 +580,16 @@ Built with:
 
 ---
 
-**Version**: 1.6.0
-**Last Updated**: 2025-11-30
+**Version**: 1.7.0
+**Last Updated**: 2025-12-01
 
 Made with care for people who value privacy and simplicity.
+
+### What's New in v1.7.0
+
+**Improve Writing** - Restructure and clarify your notes for better quality. This new AI writing tool analyzes your note and enhances it by improving structure, clarity, and precision while maintaining your original voice.
+
+**Unified AI Menu** - All AI writing assistance tools are now accessible from a single "AI Options" dropdown menu for a cleaner interface.
 
 ### What's New in v1.6.0
 

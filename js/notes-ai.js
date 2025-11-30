@@ -1072,54 +1072,219 @@ ${chunkText}`;
     }
 
     /**
+     * Improve writing - restructure, clarify, and enhance note quality
+     */
+    async function improveWriting(noteId, content) {
+        if (!content.trim()) {
+            alert('Note is empty. Nothing to improve.');
+            return;
+        }
+
+        if (state.isAnalyzing) {
+            alert('Analysis in progress. Please wait.');
+            return;
+        }
+
+        state.isAnalyzing = true;
+        // eslint-disable-next-line no-undef
+        NotesEditor.updateStatus('Improving writing...');
+
+        // Show loading modal immediately
+        const loadingModal = showLoadingModal('Improving writing...');
+
+        try {
+            const { provider, language } = await getAISettings();
+            const languageInstruction =
+                language && language !== 'en'
+                    ? `Please respond in ${getLanguageName(language)}. `
+                    : '';
+
+            const prompt = `${languageInstruction}Improve the following note by:
+1. Clarifying the main ideas and making them more concise
+2. Improving structure - organize thoughts logically with clear sections if needed
+3. Enhancing clarity - use more precise language
+4. Adding concrete examples where helpful to illustrate key points
+5. Maintaining the original voice and intent while making it more polished
+
+Return ONLY the improved version of the note. Do not add explanations, meta-commentary, or suggestions - just provide the enhanced text directly.
+
+ORIGINAL NOTE:
+${content}`;
+
+            const improved = await makeProxyApiCall(prompt, provider);
+
+            if (!improved || !improved.trim()) {
+                throw new Error('No improved version generated');
+            }
+
+            // Close loading modal and show result
+            if (loadingModal) {
+                loadingModal.remove();
+            }
+            showImprovedWritingModal(improved, noteId, content);
+
+            // eslint-disable-next-line no-undef
+            NotesEditor.updateStatus('Writing improved');
+        } catch (error) {
+            console.error('Error improving writing:', error);
+            // eslint-disable-next-line no-undef
+            NotesEditor.updateStatus('Error improving writing');
+            if (loadingModal) {
+                loadingModal.remove();
+            }
+            alert(`Error: ${error.message}`);
+        } finally {
+            state.isAnalyzing = false;
+        }
+    }
+
+    /**
+     * Show improved writing modal with backup capability
+     */
+    function showImprovedWritingModal(improved, noteId, originalText) {
+        const modal = document.createElement('div');
+        modal.className = 'ai-modal';
+        modal.innerHTML = `
+            <div class="ai-modal-content">
+                <div class="ai-modal-header">
+                    <h3>Improved Writing</h3>
+                    <button class="ai-modal-close-icon" aria-label="Close">&times;</button>
+                </div>
+                <div class="ai-modal-body">
+                    <p>${Utils.sanitizeHtml(improved)}</p>
+                </div>
+                <div class="ai-modal-footer">
+                    <button class="btn btn-secondary ai-modal-copy">Copy</button>
+                    <button class="btn btn-primary ai-modal-apply">Apply</button>
+                    <button class="btn btn-secondary ai-modal-close">Close</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const closeIconBtn = modal.querySelector('.ai-modal-close-icon');
+        const closeBtn = modal.querySelector('.ai-modal-close');
+        const copyBtn = modal.querySelector('.ai-modal-copy');
+        const applyBtn = modal.querySelector('.ai-modal-apply');
+
+        // Handle close buttons
+        if (closeIconBtn) {
+            closeIconBtn.addEventListener('click', () => modal.remove());
+        }
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => modal.remove());
+        }
+
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(improved);
+            alert('Improved text copied to clipboard');
+        });
+
+        applyBtn.addEventListener('click', () => {
+            // Save backup first, then apply changes
+            // eslint-disable-next-line no-undef
+            NotesStorage.saveBackup(noteId, originalText)
+                .then(() => {
+                    const textarea = document.getElementById('note-content-textarea');
+                    textarea.value = improved;
+                    modal.remove();
+                    // Trigger input event to update preview
+                    // eslint-disable-next-line no-undef
+                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    // Show confirmation message
+                    // eslint-disable-next-line no-undef
+                    NotesEditor.updateStatus(
+                        'Changes applied. Backup saved - you can restore from backup if needed.'
+                    );
+                    // Update backup button visibility to show the newly created backup
+                    // eslint-disable-next-line no-undef
+                    NotesEditor.updateBackupButtonVisibility(noteId);
+                })
+                .catch(error => {
+                    console.error('Error saving backup:', error);
+                    // Still apply changes even if backup fails
+                    const textarea = document.getElementById('note-content-textarea');
+                    textarea.value = improved;
+                    modal.remove();
+                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    alert('Warning: Changes applied but backup could not be saved.');
+                });
+        });
+    }
+
+    /**
      * Public API
      */
     return {
         generateTLDR,
         checkGrammar,
-        generateOpposite
+        generateOpposite,
+        improveWriting
     };
 })();
 
-// Hook up AI buttons to notes editor
+// Hook up AI dropdown menu to notes editor
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
-        const tldrBtn = document.getElementById('note-ai-tldr-btn');
-        const oppositeBtn = document.getElementById('note-ai-opposite-btn');
-        const grammarBtn = document.getElementById('note-ai-grammar-btn');
+        const optionsBtn = document.getElementById('note-ai-options-btn');
+        const dropdownMenu = document.getElementById('note-ai-dropdown-menu');
 
-        if (tldrBtn) {
-            tldrBtn.addEventListener('click', () => {
-                // eslint-disable-next-line no-undef
-                const noteId = NotesEditor.getCurrentNoteId();
-                const content = document.getElementById('note-content-textarea').value;
-                if (noteId && content) {
-                    // eslint-disable-next-line no-undef
-                    NotesAI.generateTLDR(noteId, content);
-                }
+        if (optionsBtn && dropdownMenu) {
+            // Toggle dropdown visibility
+            optionsBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                const isVisible = dropdownMenu.style.display !== 'none';
+                dropdownMenu.style.display = isVisible ? 'none' : 'block';
             });
-        }
 
-        if (oppositeBtn) {
-            oppositeBtn.addEventListener('click', () => {
-                // eslint-disable-next-line no-undef
-                const noteId = NotesEditor.getCurrentNoteId();
-                const content = document.getElementById('note-content-textarea').value;
-                if (noteId && content) {
+            // Handle dropdown item clicks
+            const dropdownItems = dropdownMenu.querySelectorAll('.ai-dropdown-item');
+            dropdownItems.forEach(item => {
+                item.addEventListener('click', e => {
+                    e.stopPropagation();
+                    const action = item.getAttribute('data-action');
                     // eslint-disable-next-line no-undef
-                    NotesAI.generateOpposite(noteId, content);
-                }
+                    const noteId = NotesEditor.getCurrentNoteId();
+                    const content = document.getElementById('note-content-textarea').value;
+
+                    if (!noteId || !content) {
+                        alert('Please create a note first.');
+                        return;
+                    }
+
+                    // Execute the selected action
+                    switch (action) {
+                        case 'grammar':
+                            // eslint-disable-next-line no-undef
+                            NotesAI.checkGrammar(noteId, content);
+                            break;
+                        case 'tldr':
+                            // eslint-disable-next-line no-undef
+                            NotesAI.generateTLDR(noteId, content);
+                            break;
+                        case 'opposite':
+                            // eslint-disable-next-line no-undef
+                            NotesAI.generateOpposite(noteId, content);
+                            break;
+                        case 'improve':
+                            // eslint-disable-next-line no-undef
+                            NotesAI.improveWriting(noteId, content);
+                            break;
+                    }
+
+                    // Close dropdown after selection
+                    dropdownMenu.style.display = 'none';
+                });
             });
-        }
 
-        if (grammarBtn) {
-            grammarBtn.addEventListener('click', () => {
-                // eslint-disable-next-line no-undef
-                const noteId = NotesEditor.getCurrentNoteId();
-                const content = document.getElementById('note-content-textarea').value;
-                if (noteId && content) {
-                    // eslint-disable-next-line no-undef
-                    NotesAI.checkGrammar(noteId, content);
+            // Close dropdown when clicking outside
+            document.addEventListener('click', e => {
+                if (
+                    !e.target.closest('#note-ai-options-btn') &&
+                    !e.target.closest('#note-ai-dropdown-menu')
+                ) {
+                    dropdownMenu.style.display = 'none';
                 }
             });
         }

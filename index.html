@@ -373,9 +373,9 @@
                                 <div class="note-controls">
                                     <div class="ai-button-group">
                                         <button
-                                            id="note-ai-tldr-btn"
+                                            id="note-ai-options-btn"
                                             class="btn btn-secondary btn-sm"
-                                            title="Generate TLDR"
+                                            title="AI writing assistance options"
                                         >
                                             <svg
                                                 width="16"
@@ -385,15 +385,45 @@
                                                 stroke="currentColor"
                                                 stroke-width="2"
                                             >
-                                                <polygon
-                                                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-                                                ></polygon>
+                                                <circle cx="12" cy="12" r="1"></circle>
+                                                <circle cx="19" cy="12" r="1"></circle>
+                                                <circle cx="5" cy="12" r="1"></circle>
                                             </svg>
-                                            TLDR
+                                            AI Options
                                         </button>
+                                        <div
+                                            id="note-ai-dropdown-menu"
+                                            class="ai-dropdown-menu"
+                                            style="display: none"
+                                        >
+                                            <div class="ai-dropdown-item" data-action="grammar">
+                                                <div class="ai-dropdown-title">Grammar</div>
+                                                <div class="ai-dropdown-desc">
+                                                    Fix typos, grammar & spelling
+                                                </div>
+                                            </div>
+                                            <div class="ai-dropdown-item" data-action="tldr">
+                                                <div class="ai-dropdown-title">TLDR</div>
+                                                <div class="ai-dropdown-desc">
+                                                    Summarize key points
+                                                </div>
+                                            </div>
+                                            <div class="ai-dropdown-item" data-action="opposite">
+                                                <div class="ai-dropdown-title">Opposite</div>
+                                                <div class="ai-dropdown-desc">
+                                                    Explore opposing viewpoints
+                                                </div>
+                                            </div>
+                                            <div class="ai-dropdown-item" data-action="improve">
+                                                <div class="ai-dropdown-title">Improve Writing</div>
+                                                <div class="ai-dropdown-desc">
+                                                    Restructure & clarify
+                                                </div>
+                                            </div>
+                                        </div>
                                         <button
                                             class="ai-info-btn"
-                                            title="AI-generated summary. May contain inaccuracies."
+                                            title="AI-powered writing tools. May contain inaccuracies."
                                         >
                                             <svg
                                                 width="16"
@@ -415,107 +445,9 @@
                                                 </text>
                                             </svg>
                                             <span class="ai-tooltip"
-                                                >AI-generated summary using language models. May
-                                                contain inaccuracies. Always verify important
-                                                information.</span
-                                            >
-                                        </button>
-                                    </div>
-                                    <div class="ai-button-group">
-                                        <button
-                                            id="note-ai-opposite-btn"
-                                            class="btn btn-secondary btn-sm"
-                                            title="Generate opposing viewpoints"
-                                        >
-                                            <svg
-                                                width="16"
-                                                height="16"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="2"
-                                            >
-                                                <path d="M9 11H3v2h6v9H5v-7h4v-4z"></path>
-                                                <path d="M21 11h-6v2h6v9h-4v-7h4v-4z"></path>
-                                                <circle cx="12" cy="4" r="2"></circle>
-                                            </svg>
-                                            Opposite
-                                        </button>
-                                        <button
-                                            class="ai-info-btn"
-                                            title="AI-generated opposing viewpoints for critical thinking"
-                                        >
-                                            <svg
-                                                width="16"
-                                                height="16"
-                                                viewBox="0 0 24 24"
-                                                fill="currentColor"
-                                                stroke="none"
-                                            >
-                                                <circle cx="12" cy="12" r="10"></circle>
-                                                <text
-                                                    x="12"
-                                                    y="16.5"
-                                                    text-anchor="middle"
-                                                    font-size="13"
-                                                    font-weight="bold"
-                                                    fill="white"
-                                                >
-                                                    i
-                                                </text>
-                                            </svg>
-                                            <span class="ai-tooltip"
-                                                >Generate opposing viewpoints to challenge your
-                                                thinking and explore alternative perspectives.</span
-                                            >
-                                        </button>
-                                    </div>
-                                    <div class="ai-button-group">
-                                        <button
-                                            id="note-ai-grammar-btn"
-                                            class="btn btn-secondary btn-sm"
-                                            title="Check grammar"
-                                        >
-                                            <svg
-                                                width="16"
-                                                height="16"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="2"
-                                            >
-                                                <circle cx="11" cy="11" r="8"></circle>
-                                                <path d="m21 21-4.35-4.35"></path>
-                                            </svg>
-                                            Grammar
-                                        </button>
-                                        <button
-                                            class="ai-info-btn"
-                                            title="AI-generated grammar check. May miss errors or suggest unnecessary changes."
-                                        >
-                                            <svg
-                                                width="16"
-                                                height="16"
-                                                viewBox="0 0 24 24"
-                                                fill="currentColor"
-                                                stroke="none"
-                                            >
-                                                <circle cx="12" cy="12" r="10"></circle>
-                                                <text
-                                                    x="12"
-                                                    y="16.5"
-                                                    text-anchor="middle"
-                                                    font-size="13"
-                                                    font-weight="bold"
-                                                    fill="white"
-                                                >
-                                                    i
-                                                </text>
-                                            </svg>
-                                            <span class="ai-tooltip"
-                                                >AI-generated grammar and spelling review. May miss
-                                                errors or suggest incorrect changes. Always review
-                                                suggestions carefully before applying.</span
+                                                >AI-powered writing tools using language models. May
+                                                contain inaccuracies. Always review suggestions
+                                                carefully before applying.</span
                                             >
                                         </button>
                                     </div>
