@@ -363,6 +363,38 @@ list-manager/
 **Valid priorities:** none, low, medium, high
 **Item source:** user or ai
 
+### Issue: PDF export not working / cannot open exported PDF
+
+**Possible causes:**
+- Puppeteer dependency version mismatch
+- Chrome browser not installed for Puppeteer
+- Outdated Chrome browser cache
+
+**Solutions:**
+
+1. **Quick Fix - Install Chrome Browser:**
+   ```bash
+   cd /path/to/list-manager
+   npx puppeteer browsers install chrome
+   ```
+   This will download the correct Chrome version that Puppeteer expects.
+
+2. **Verify PDF Generation:**
+   After running the command above, try exporting a note to PDF again.
+
+3. **If issue persists:**
+   - Delete the Puppeteer cache and reinstall:
+     ```bash
+     rm -rf ~/.cache/puppeteer
+     npx puppeteer browsers install chrome
+     npm install
+     ```
+   - Restart your development server
+   - Try exporting again
+
+**Prevention:**
+This issue is now automatically prevented by a `postinstall` script in `package.json` that ensures Chrome is always installed when you run `npm install`.
+
 ### Issue: Performance is slow
 
 **Possible causes:**
