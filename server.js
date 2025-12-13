@@ -1279,13 +1279,14 @@ async function handlePdfExport(req, res) {
                     th, td { border: 1px solid #ddd; padding: 0.5em; text-align: left; vertical-align: top; }
                     th { background-color: #f5f5f5; font-weight: bold; }
                     tr:nth-child(even) { background-color: #fafafa; }
+                    hr { margin-top: 1.5em; margin-bottom: 1em; border: none; border-top: 1px solid #ccc; }
                     strong { font-weight: bold; }
                     em { font-style: italic; }
                     code { background-color: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px; font-family: monospace; font-size: 0.9em; }
                     pre { background-color: #f5f5f5; padding: 1em; border-radius: 5px; margin: 0.5em 0; overflow-x: auto; }
                     pre code { background: none; padding: 0; }
                     blockquote { border-left: 4px solid #ddd; padding-left: 1em; margin: 0.5em 0; color: #666; }
-                    .note-title { font-size: 2.5em; font-weight: bold; margin-bottom: 0.3em; }
+                    .note-title { font-size: 0.9em; color: #999; font-weight: 500; margin-bottom: 0.5em; letter-spacing: 0.05em; text-transform: uppercase; }
                 </style>
             </head>
             <body>
