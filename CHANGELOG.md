@@ -14,6 +14,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.8.0] - 2025-12-25
+
+### Added
+- 🎯 **Notes FAB (Floating Action Button)** - Quick access to note functions from anywhere in the notes view
+  - Toggle sidebar, create new note, import, and export actions
+  - Positioned top-right under menu bar for easy access
+  - Expands with smooth animation to show action menu
+  - Only visible on Notes tab (hidden on Lists)
+
+### Changed
+- Removed redundant sidebar toggle button from notes editor header
+- Removed notes footer action buttons (replaced by FAB)
+- Streamlined notes UI with consolidated quick actions
+
+### Fixed
+- Users no longer need to scroll to access note functions when viewing long notes (TC-19)
+
+---
+
 ## [1.7.0] - 2025-12-01
 
 ### Added
