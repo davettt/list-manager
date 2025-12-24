@@ -63,6 +63,8 @@ const NotesApp = (() => {
         populateCategoryDropdown();
         // Restore sidebar state early to prevent visual flashing
         restoreSidebarState();
+        // Initialize FAB
+        initializeFAB();
         // Set initial button states
         updateSortButtonStates();
         updateCategorySortButtonStates();
@@ -96,7 +98,7 @@ const NotesApp = (() => {
         const listsView = elements.listsView();
         const notesView = elements.notesView();
         const listsFooter = document.getElementById('lists-footer-actions');
-        const notesFooter = document.getElementById('notes-footer-actions');
+        const notesFab = document.getElementById('notes-fab');
 
         if (listsTabBtn && notesTabBtn && listsView && notesView) {
             listsTabBtn.addEventListener('click', () => {
@@ -104,9 +106,12 @@ const NotesApp = (() => {
                 notesTabBtn.classList.remove('active');
                 listsView.style.display = 'block';
                 notesView.style.display = 'none';
-                if (listsFooter && notesFooter) {
+                if (listsFooter) {
                     listsFooter.style.display = 'flex';
-                    notesFooter.style.display = 'none';
+                }
+                // Hide FAB on lists page
+                if (notesFab) {
+                    notesFab.style.display = 'none';
                 }
                 // Remove notes-active class from main-content
                 const mainContent = document.querySelector('main > .main-content');
@@ -122,9 +127,12 @@ const NotesApp = (() => {
                 listsTabBtn.classList.remove('active');
                 listsView.style.display = 'none';
                 notesView.style.display = 'block';
-                if (listsFooter && notesFooter) {
+                if (listsFooter) {
                     listsFooter.style.display = 'none';
-                    notesFooter.style.display = 'flex';
+                }
+                // Show FAB on notes page
+                if (notesFab) {
+                    notesFab.style.display = 'flex';
                 }
                 // Add class to main-content to remove padding
                 const mainContent = document.querySelector('main > .main-content');
@@ -211,12 +219,6 @@ const NotesApp = (() => {
                     pdfExportModal.style.display = 'none';
                 }
             });
-        }
-
-        // Sidebar toggle button
-        const sidebarToggle = document.getElementById('notes-sidebar-toggle');
-        if (sidebarToggle) {
-            sidebarToggle.addEventListener('click', toggleSidebar);
         }
 
         // Sidebar close button
@@ -321,6 +323,83 @@ const NotesApp = (() => {
                 sidebar.classList.add('collapsed');
             }
         }
+    }
+
+    /**
+     * Initialize FAB (Floating Action Button)
+     */
+    function initializeFAB() {
+        const fabContainer = document.getElementById('notes-fab');
+        const fabTrigger = document.getElementById('notes-fab-trigger');
+        const fabToggleSidebar = document.getElementById('fab-toggle-sidebar');
+        const fabNewNote = document.getElementById('fab-new-note');
+        const fabImport = document.getElementById('fab-import');
+        const fabExport = document.getElementById('fab-export');
+
+        if (!fabTrigger) {
+            return;
+        }
+
+        // Toggle FAB menu
+        fabTrigger.addEventListener('click', e => {
+            e.stopPropagation();
+            fabContainer.classList.toggle('open');
+        });
+
+        // Close FAB when clicking outside
+        document.addEventListener('click', e => {
+            if (fabContainer && !fabContainer.contains(e.target)) {
+                fabContainer.classList.remove('open');
+            }
+        });
+
+        // FAB action: Toggle Sidebar
+        if (fabToggleSidebar) {
+            fabToggleSidebar.addEventListener('click', () => {
+                toggleSidebar();
+                fabContainer.classList.remove('open');
+            });
+        }
+
+        // FAB action: New Note
+        if (fabNewNote) {
+            fabNewNote.addEventListener('click', () => {
+                const newNoteBtn = document.getElementById('new-note-btn');
+                if (newNoteBtn) {
+                    newNoteBtn.click();
+                }
+                fabContainer.classList.remove('open');
+            });
+        }
+
+        // FAB action: Import
+        if (fabImport) {
+            fabImport.addEventListener('click', () => {
+                const importBtn = document.getElementById('notes-import-btn');
+                if (importBtn) {
+                    importBtn.click();
+                }
+                fabContainer.classList.remove('open');
+            });
+        }
+
+        // FAB action: Export
+        if (fabExport) {
+            fabExport.addEventListener('click', () => {
+                const exportBtn = document.getElementById('notes-export-btn');
+                if (exportBtn) {
+                    exportBtn.click();
+                }
+                fabContainer.classList.remove('open');
+            });
+        }
+
+        // Close FAB on Escape key
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && fabContainer.classList.contains('open')) {
+                fabContainer.classList.remove('open');
+            }
+        });
     }
 
     /**

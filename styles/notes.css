@@ -1115,6 +1115,134 @@ main.main-content > .container {
 }
 
 /* ===================================
+   Notes FAB (Floating Action Button)
+   =================================== */
+
+.notes-fab-container {
+    position: fixed;
+    top: 5rem;
+    right: 1.5rem;
+    z-index: 100;
+    display: none; /* Hidden by default, shown via JS when notes tab is active */
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.notes-fab-trigger {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--color-primary);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    transition:
+        transform 0.2s ease,
+        background-color 0.2s ease,
+        box-shadow 0.2s ease;
+    color: white;
+}
+
+.notes-fab-trigger:hover {
+    background-color: var(--color-primary-hover);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    transform: scale(1.05);
+}
+
+.notes-fab-trigger:active {
+    transform: scale(0.95);
+}
+
+.notes-fab-trigger .fab-icon-open {
+    display: block;
+    transition:
+        transform 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.notes-fab-trigger .fab-icon-close {
+    display: none;
+    position: absolute;
+    transition:
+        transform 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.notes-fab-container.open .notes-fab-trigger .fab-icon-open {
+    display: none;
+}
+
+.notes-fab-container.open .notes-fab-trigger .fab-icon-close {
+    display: block;
+}
+
+.notes-fab-container.open .notes-fab-trigger {
+    background-color: var(--color-text-secondary);
+}
+
+.notes-fab-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px) scale(0.9);
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease,
+        visibility 0.2s ease;
+}
+
+.notes-fab-container.open .notes-fab-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+
+.notes-fab-action {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    padding-right: 1.25rem;
+    background-color: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 28px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition:
+        background-color 0.15s ease,
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+    white-space: nowrap;
+    color: var(--color-text-primary);
+}
+
+.notes-fab-action:hover {
+    background-color: var(--color-bg-secondary);
+    transform: translateX(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.notes-fab-action:active {
+    transform: translateX(-2px) scale(0.98);
+}
+
+.notes-fab-action svg {
+    flex-shrink: 0;
+    color: var(--color-primary);
+}
+
+.fab-action-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* ===================================
    Responsive Design
    =================================== */
 
