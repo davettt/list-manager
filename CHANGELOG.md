@@ -22,14 +22,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Positioned top-right under menu bar for easy access
   - Expands with smooth animation to show action menu
   - Only visible on Notes tab (hidden on Lists)
+- 📦 **Improved Data Manager** - Clearer, safer import/export/clear operations (TC-20)
+  - **Lists page**: Export/Import now handles lists only
+  - **Notes page**: Export/Import now handles notes only (with full content)
+  - **Settings Data Manager**: Full backup (lists + notes + settings)
+  - All imports ADD to existing data (never replace)
+  - Clear All Data auto-downloads backup before clearing
 
 ### Changed
 - Removed redundant sidebar toggle button from notes editor header
 - Removed notes footer action buttons (replaced by FAB)
 - Streamlined notes UI with consolidated quick actions
+- Export/Import behavior is now intuitive and context-specific
 
 ### Fixed
 - Users no longer need to scroll to access note functions when viewing long notes (TC-19)
+- Notes export now includes full content (was metadata only)
+- Notes JSON import now functional (was showing "coming soon")
+- Fixed route ordering for `/api/data/notes/export` endpoint
+- Normalized unusual Unicode line terminators in exported content
 
 ---
 

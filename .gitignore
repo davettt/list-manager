@@ -32,6 +32,7 @@ build/
 
 # Development specs and internal docs
 .claude/
+CLAUDE.md
 
 # User data (local storage)
 local_data/

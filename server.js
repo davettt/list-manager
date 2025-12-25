@@ -977,6 +977,113 @@ app.post('/api/data/notes', async (req, res) => {
     }
 });
 
+// IMPORTANT: These routes must come BEFORE /api/data/notes/:id to avoid matching "export" or "bulk" as an ID
+
+// Get all notes with full content (for export)
+app.get('/api/data/notes/export', async (req, res) => {
+    try {
+        if (!existsSync(NOTES_FILE)) {
+            return res.json([]);
+        }
+
+        const data = await readFile(NOTES_FILE, 'utf-8');
+        const notes = JSON.parse(data);
+
+        // Load content for each note
+        const notesWithContent = await Promise.all(
+            notes.map(async note => {
+                const newFilename = buildNoteFilename(note.title, note.id);
+                let noteFile = path.join(NOTES_DIR, `${newFilename}.md`);
+
+                // Try new format first, fall back to old format
+                if (!existsSync(noteFile)) {
+                    noteFile = path.join(NOTES_DIR, `${note.id}.md`);
+                }
+
+                let content = '';
+                if (existsSync(noteFile)) {
+                    content = await readFile(noteFile, 'utf-8');
+                    // Normalize line endings - replace unusual Unicode line separators
+                    // U+2028 (Line Separator) and U+2029 (Paragraph Separator) with standard \n
+                    content = content.replace(/[\u2028\u2029]/g, '\n');
+                }
+
+                return { ...note, content };
+            })
+        );
+
+        res.json(notesWithContent);
+    } catch (error) {
+        console.error('Error exporting notes:', error);
+        res.status(500).json({ error: 'Failed to export notes' });
+    }
+});
+
+// Bulk import notes
+app.post('/api/data/notes/bulk', async (req, res) => {
+    try {
+        const { notes: importNotes } = req.body;
+
+        if (!Array.isArray(importNotes)) {
+            return res.status(400).json({ error: 'Notes array is required' });
+        }
+
+        // Read existing notes
+        let existingNotes = [];
+        if (existsSync(NOTES_FILE)) {
+            const data = await readFile(NOTES_FILE, 'utf-8');
+            existingNotes = JSON.parse(data);
+        }
+
+        const now = new Date().toISOString();
+        let importedCount = 0;
+
+        for (const note of importNotes) {
+            // Generate new ID to avoid conflicts
+            const newId = uuidv4();
+            const title = note.title || 'Imported Note';
+            const category = note.category || 'personal';
+            const content = note.content || '';
+
+            // Create note metadata
+            const noteMetadata = {
+                id: newId,
+                title: title.substring(0, 200),
+                category,
+                tags: Array.isArray(note.tags) ? note.tags : [],
+                favorite: note.favorite || false,
+                createdAt: note.createdAt || now,
+                updatedAt: now,
+                metadata: {
+                    wordCount: content.split(/\s+/).filter(w => w).length,
+                    characterCount: content.length
+                }
+            };
+
+            existingNotes.push(noteMetadata);
+
+            // Save content file
+            const newFilename = buildNoteFilename(title, newId);
+            const noteFile = path.join(NOTES_DIR, `${newFilename}.md`);
+            await writeFile(noteFile, content);
+
+            importedCount++;
+        }
+
+        // Save updated notes metadata
+        await writeFile(NOTES_FILE, JSON.stringify(existingNotes, null, 2));
+
+        res.json({
+            success: true,
+            message: `Imported ${importedCount} note(s)`,
+            count: importedCount
+        });
+    } catch (error) {
+        console.error('Error bulk importing notes:', error);
+        res.status(500).json({ error: 'Failed to import notes' });
+    }
+});
+
 // Get single note with content
 app.get('/api/data/notes/:id', async (req, res) => {
     try {
@@ -1160,6 +1267,44 @@ app.delete('/api/data/notes/:id', async (req, res) => {
     } catch (error) {
         console.error('Error deleting note:', error);
         res.status(500).json({ error: 'Failed to delete note' });
+    }
+});
+
+// Clear all notes (permanent delete without trash)
+app.delete('/api/data/notes', async (req, res) => {
+    try {
+        // Read existing notes to get file list
+        let notes = [];
+        if (existsSync(NOTES_FILE)) {
+            const data = await readFile(NOTES_FILE, 'utf-8');
+            notes = JSON.parse(data);
+        }
+
+        // Delete all note content files
+        for (const note of notes) {
+            const newFilename = buildNoteFilename(note.title, note.id);
+            const newNoteFile = path.join(NOTES_DIR, `${newFilename}.md`);
+            const oldNoteFile = path.join(NOTES_DIR, `${note.id}.md`);
+
+            if (existsSync(newNoteFile)) {
+                await unlink(newNoteFile);
+            }
+            if (existsSync(oldNoteFile)) {
+                await unlink(oldNoteFile);
+            }
+        }
+
+        // Clear notes metadata
+        await writeFile(NOTES_FILE, JSON.stringify([], null, 2));
+
+        res.json({
+            success: true,
+            message: `Cleared ${notes.length} note(s)`,
+            count: notes.length
+        });
+    } catch (error) {
+        console.error('Error clearing notes:', error);
+        res.status(500).json({ error: 'Failed to clear notes' });
     }
 });
 

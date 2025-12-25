@@ -21,7 +21,8 @@
             category: '',
             tag: '',
             favoritesOnly: false
-        }
+        },
+        importMode: 'all' // 'all' for full backup, 'lists' for lists-only
     };
 
     // ===================================
@@ -200,11 +201,11 @@
 
         document.getElementById('view-toggle')?.addEventListener('click', toggleView);
 
-        // Footer buttons
+        // Footer buttons (Lists page - lists only)
         document.getElementById('new-list-btn')?.addEventListener('click', createNewList);
         document.getElementById('empty-new-list-btn')?.addEventListener('click', createNewList);
-        document.getElementById('import-btn')?.addEventListener('click', importData);
-        document.getElementById('export-btn')?.addEventListener('click', exportData);
+        document.getElementById('import-btn')?.addEventListener('click', importLists);
+        document.getElementById('export-btn')?.addEventListener('click', exportLists);
 
         // List modal
         document.getElementById('modal-back-btn')?.addEventListener('click', closeListModal);
@@ -231,8 +232,8 @@
         document
             .getElementById('ai-enabled-checkbox')
             ?.addEventListener('change', toggleAiFeatures);
-        document.getElementById('export-all-btn')?.addEventListener('click', exportData);
-        document.getElementById('import-data-btn')?.addEventListener('click', importData);
+        document.getElementById('export-all-btn')?.addEventListener('click', exportAllData);
+        document.getElementById('import-data-btn')?.addEventListener('click', importAllData);
         document.getElementById('clear-all-btn')?.addEventListener('click', clearAllData);
 
         // AI Panel
@@ -1160,18 +1161,50 @@
     // Data Import/Export
     // ===================================
 
-    async function exportData() {
+    // Full backup export (for Settings Data Manager)
+    async function exportAllData() {
         try {
             const data = await Storage.exportData();
             const filename = `list-manager-backup-${new Date().toISOString().split('T')[0]}.json`;
             Utils.downloadJson(data, filename);
-            UI.showToast('Data exported successfully', 'success');
+            UI.showToast('Full backup exported successfully', 'success');
         } catch (error) {
             UI.showToast('Failed to export data', 'error');
         }
     }
 
-    function importData() {
+    // Lists-only export (for Lists page)
+    async function exportLists() {
+        try {
+            const lists = await Storage.getLists();
+            if (lists.length === 0) {
+                UI.showToast('No lists to export', 'info');
+                return;
+            }
+            const data = {
+                version: '1.0.0',
+                exportDate: new Date().toISOString(),
+                type: 'lists',
+                lists: lists
+            };
+            const filename = `lists-export-${new Date().toISOString().split('T')[0]}.json`;
+            Utils.downloadJson(data, filename);
+            UI.showToast(`Exported ${lists.length} list(s)`, 'success');
+        } catch (error) {
+            UI.showToast('Failed to export lists', 'error');
+        }
+    }
+
+    // Full import (for Settings Data Manager)
+    function importAllData() {
+        state.importMode = 'all';
+        const fileInput = document.getElementById('file-input');
+        fileInput?.click();
+    }
+
+    // Lists-only import (for Lists page)
+    function importLists() {
+        state.importMode = 'lists';
         const fileInput = document.getElementById('file-input');
         fileInput?.click();
     }
@@ -1182,13 +1215,26 @@
             return;
         }
 
+        const importMode = state.importMode;
+
         try {
             // Detect file type and read
             const { type, data } = await ImportHandler.detectAndReadFile(file);
 
             if (type === 'json') {
-                // Handle JSON import directly
-                const result = await Storage.importData(data);
+                let importData = data;
+
+                // For lists-only mode, only import lists (ignore notes/settings)
+                if (importMode === 'lists') {
+                    if (!data.lists || !Array.isArray(data.lists)) {
+                        UI.showToast('No lists found in import file', 'error');
+                        return;
+                    }
+                    importData = { lists: data.lists };
+                }
+
+                // Handle JSON import
+                const result = await Storage.importData(importData);
 
                 if (result.success) {
                     state.lists = await Storage.getLists();
@@ -1204,14 +1250,15 @@
                     UI.showToast(result.message, 'error');
                 }
             } else {
-                // Handle text import - show configuration dialog
+                // Handle text import - show configuration dialog (creates a new list)
                 showTextImportDialog(file, data);
             }
         } catch (error) {
             UI.showToast(error.message || 'Failed to import data', 'error');
         } finally {
-            // Reset file input
+            // Reset file input and import mode
             e.target.value = '';
+            state.importMode = 'all';
         }
     }
 
@@ -1347,19 +1394,34 @@
     }
 
     async function clearAllData() {
+        // First warning with details
         if (
             !UI.confirm(
-                'Are you sure you want to delete ALL lists and settings? This cannot be undone!'
+                'WARNING: This will permanently delete ALL lists, notes, and settings.\n\n' +
+                    'A backup will be downloaded automatically before deletion.\n\n' +
+                    'Do you want to proceed?'
             )
         ) {
             return;
         }
 
-        if (!UI.confirm('This will permanently delete everything. Are you absolutely sure?')) {
+        // Second confirmation
+        if (!UI.confirm('This action CANNOT be undone. Are you absolutely sure?')) {
             return;
         }
 
         try {
+            // Create automatic backup before clearing
+            const data = await Storage.exportData();
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `list-manager-backup-before-clear-${timestamp}.json`;
+            Utils.downloadJson(data, filename);
+            UI.showToast('Backup created. Clearing data...', 'info');
+
+            // Short delay to ensure backup download starts
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Now clear all data
             await Storage.clearAllData();
             state.lists = [];
             state.settings = await Storage.getSettings();
@@ -1375,7 +1437,7 @@
             UI.populateTagFilter(state.lists);
             renderLists();
             UI.hideModal('settings-modal');
-            UI.showToast('All data cleared', 'success');
+            UI.showToast('All data cleared. Backup saved to Downloads.', 'success');
         } catch (error) {
             UI.showToast('Failed to clear data', 'error');
         }

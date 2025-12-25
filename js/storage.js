@@ -334,16 +334,28 @@ const Storage = (function () {
         const lists = await getLists();
         const settings = await getSettings();
 
+        // Fetch notes with full content
+        let notes = [];
+        try {
+            const response = await fetch('/api/data/notes/export');
+            if (response.ok) {
+                notes = await response.json();
+            }
+        } catch (error) {
+            console.error('Error fetching notes for export:', error);
+        }
+
         return {
             version: CURRENT_VERSION,
             exportDate: new Date().toISOString(),
             lists: lists,
+            notes: notes,
             settings: settings
         };
     }
 
     /**
-     * Import data (validates structure first)
+     * Import data - ADDS to existing data (does not replace)
      * @param {Object} data - Data to import
      * @returns {Promise<Object>} Result with success status and message
      */
@@ -354,21 +366,65 @@ const Storage = (function () {
                 return { success: false, message: 'Invalid data format' };
             }
 
-            if (!Array.isArray(data.lists)) {
-                return { success: false, message: 'Invalid lists data' };
+            const hasLists = Array.isArray(data.lists);
+            const hasNotes = Array.isArray(data.notes);
+
+            if (!hasLists && !hasNotes) {
+                return { success: false, message: 'No lists or notes found in import file' };
             }
 
-            // Validate each list has required fields
-            for (const list of data.lists) {
-                if (!list.id || !list.name || !Array.isArray(list.items)) {
-                    return { success: false, message: 'Invalid list structure' };
+            let listsImported = 0;
+            let notesImported = 0;
+
+            // Import lists if present - APPEND to existing with new IDs
+            if (hasLists && data.lists.length > 0) {
+                // Validate each list has required fields
+                for (const list of data.lists) {
+                    if (!list.name || !Array.isArray(list.items)) {
+                        return { success: false, message: 'Invalid list structure' };
+                    }
+                }
+
+                // Get existing lists
+                const existingLists = await getLists();
+
+                // Add each imported list with a new ID to avoid conflicts
+                for (const list of data.lists) {
+                    const newList = {
+                        ...list,
+                        id: crypto.randomUUID(), // Generate new ID
+                        items: list.items.map(item => ({
+                            ...item,
+                            id: crypto.randomUUID() // New IDs for items too
+                        })),
+                        metadata: {
+                            ...list.metadata,
+                            created: list.metadata?.created || new Date().toISOString(),
+                            modified: new Date().toISOString()
+                        }
+                    };
+                    existingLists.push(newList);
+                    listsImported++;
+                }
+
+                await saveLists(existingLists);
+            }
+
+            // Import notes if present - APPEND to existing (server handles new IDs)
+            if (hasNotes && data.notes.length > 0) {
+                const response = await fetch('/api/data/notes/bulk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notes: data.notes })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    notesImported = result.count || data.notes.length;
                 }
             }
 
-            // Import lists
-            await saveLists(data.lists);
-
-            // Import settings if provided
+            // Import settings if provided - merge with existing
             if (data.settings && typeof data.settings === 'object') {
                 const currentSettings = await getSettings();
                 const mergedSettings = {
@@ -378,9 +434,18 @@ const Storage = (function () {
                 await saveSettings(mergedSettings);
             }
 
+            // Build success message
+            const parts = [];
+            if (listsImported > 0) {
+                parts.push(`${listsImported} list(s)`);
+            }
+            if (notesImported > 0) {
+                parts.push(`${notesImported} note(s)`);
+            }
+
             return {
                 success: true,
-                message: `Successfully imported ${data.lists.length} list(s)`
+                message: `Successfully added ${parts.join(' and ')} to existing data`
             };
         } catch (error) {
             console.error('Error importing data:', error);
@@ -392,13 +457,20 @@ const Storage = (function () {
     }
 
     /**
-     * Clear all data
+     * Clear all data (lists, notes, and settings)
      * @returns {Promise<boolean>} Success status
      */
     async function clearAllData() {
         try {
+            // Clear lists
             await saveLists([]);
+
+            // Clear notes
+            await fetch('/api/data/notes', { method: 'DELETE' });
+
+            // Reset settings to defaults
             await saveSettings(DEFAULT_SETTINGS);
+
             return true;
         } catch (error) {
             console.error('Error clearing data:', error);

@@ -911,20 +911,30 @@ const NotesApp = (() => {
     }
 
     /**
-     * Export all notes
+     * Export all notes (with full content)
      */
-    function exportNotes() {
+    async function exportNotes() {
         try {
             if (!allNotes || allNotes.length === 0) {
                 showToast('No notes to export', 'info');
                 return;
             }
 
+            showToast('Preparing export...', 'info');
+
+            // Fetch notes with full content from server
+            const response = await fetch('/api/data/notes/export');
+            if (!response.ok) {
+                throw new Error('Failed to fetch notes');
+            }
+            const notesWithContent = await response.json();
+
             const notesData = {
                 version: 1,
                 exportDate: new Date().toISOString(),
-                noteCount: allNotes.length,
-                notes: allNotes
+                type: 'notes',
+                noteCount: notesWithContent.length,
+                notes: notesWithContent
             };
 
             const dataStr = JSON.stringify(notesData, null, 2);
@@ -946,7 +956,7 @@ const NotesApp = (() => {
             link.click();
             URL.revokeObjectURL(url);
 
-            showToast(`Exported ${allNotes.length} notes successfully`, 'success');
+            showToast(`Exported ${notesWithContent.length} notes successfully`, 'success');
         } catch (error) {
             console.error('Error exporting notes:', error);
             showToast('Failed to export notes', 'error');
@@ -997,21 +1007,44 @@ const NotesApp = (() => {
                         return;
                     }
 
-                    // Validate that each note has required fields
-                    const invalidNotes = importData.notes.filter(
-                        note => !note.id || !note.title || !note.metadata
-                    );
+                    // Filter out notes without required title field
+                    const validNotes = importData.notes.filter(note => note.title);
+                    const skippedCount = importData.notes.length - validNotes.length;
 
-                    if (invalidNotes.length > 0) {
+                    if (validNotes.length === 0) {
+                        showToast('No valid notes found (notes must have a title)', 'error');
+                        return;
+                    }
+
+                    if (skippedCount > 0) {
                         showToast(
-                            `${invalidNotes.length} notes have invalid format and will be skipped`,
+                            `${skippedCount} notes without titles will be skipped`,
                             'warning'
                         );
                     }
 
+                    showToast(`Importing ${validNotes.length} notes...`, 'info');
+
+                    // Call bulk import endpoint (adds to existing notes with new IDs)
+                    const response = await fetch('/api/data/notes/bulk', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ notes: validNotes })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to import notes');
+                    }
+
+                    const result = await response.json();
+
+                    // Refresh the notes list
+                    allNotes = await NotesStorage.getAllNotes();
+                    filterNotes();
+
                     showToast(
-                        `Ready to import ${importData.notes.length - invalidNotes.length} notes. This feature will be implemented soon.`,
-                        'info'
+                        `Successfully added ${result.count} note(s) to your collection`,
+                        'success'
                     );
                 } else {
                     // Handle text import - create a single note from the content
