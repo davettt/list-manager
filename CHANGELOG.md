@@ -11,6 +11,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **AI: Habit Builder** - Generate actionable habits or behavior changes based on productivity notes (may be contextual)
 - **AI: Think Deeper** - Additional analysis options to challenge and expand thinking on specific note types
 - **Performance**: Explore lighter weight AI models or caching for frequent queries
+- **Theming**: Font family options and visual theme customization
+
+---
+
+## [1.9.0] - 2025-12-26
+
+### Added
+- 📂 **Subcategories for Notes** - Organize notes with hierarchical categories (up to 2 levels deep)
+  - Create subcategories like "Work/Projects" or "Personal/Health"
+  - Visual hierarchy in sidebar with indented subcategories
+  - "+" buttons appear on hover to add subcategories under any category
+  - "Add Category" button at sidebar bottom for root categories
+- 🖱️ **Drag and Drop Notes** - Move notes between categories by dragging
+  - Drag any note to a category header to reassign it
+  - Visual feedback with drop target highlighting
+  - Toast notification confirms the move
+- 📋 **Improved Category Dropdown** - Note editor category dropdown shows hierarchy
+  - Subcategories displayed with visual indentation
+  - Sorted alphabetically for easy navigation
+
+### Changed
+- Category expansion/collapse now uses `.category-content` wrapper for cleaner structure
+- Empty subcategories are now visible (previously hidden until notes were added)
+
+### Fixed
+- Category toggle (expand/collapse) now works correctly with new hierarchical structure
+- `restoreCategoryState()` updated to use new DOM structure
 
 ---
 

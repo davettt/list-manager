@@ -367,6 +367,32 @@ main.main-content > .container {
     border-bottom: none;
 }
 
+/* Nested Category Indentation */
+.category-group.depth-1 {
+    margin-left: 1rem;
+    border-bottom: none;
+}
+
+.category-group.depth-1 .category-header {
+    padding-left: 0.75rem;
+    font-size: 0.8rem;
+}
+
+.category-group.depth-1 .category-notes .note-item {
+    padding-left: 1.5rem;
+}
+
+/* Category Content (collapsible wrapper) */
+.category-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--transition-fast) ease;
+}
+
+.category-content.expanded {
+    max-height: 5000px;
+}
+
 /* Category Header (Collapsible) */
 .category-header {
     display: flex;
@@ -402,19 +428,64 @@ main.main-content > .container {
     transform: rotate(-90deg);
 }
 
+/* Category Add Button */
+.category-add-btn {
+    margin-left: auto;
+    padding: 0.2rem 0.4rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    opacity: 0;
+    transition:
+        opacity 0.15s ease,
+        color 0.15s ease;
+}
+
+.category-header:hover .category-add-btn {
+    opacity: 1;
+}
+
+.category-add-btn:hover {
+    color: var(--color-primary);
+}
+
+/* Add Category Container (at bottom of sidebar) */
+.add-category-container {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--color-border);
+    background-color: var(--color-bg-primary);
+}
+
+.add-category-btn {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    background: transparent;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.15s ease;
+}
+
+.add-category-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background-color: var(--color-bg-secondary);
+}
+
 /* Category Notes List */
 .category-notes {
     list-style: none;
     margin: 0;
     padding: 0;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height var(--transition-fast) ease;
     background-color: var(--color-bg-primary);
-}
-
-.category-notes.expanded {
-    max-height: 5000px;
 }
 
 /* Note Item in Sidebar */
@@ -456,6 +527,41 @@ main.main-content > .container {
 .category-notes .note-item-favorite {
     font-size: 0.85rem;
     margin: 0;
+}
+
+/* Drag and Drop Styling */
+.note-item[draggable='true'] {
+    cursor: grab;
+}
+
+.note-item[draggable='true']:active {
+    cursor: grabbing;
+}
+
+.note-item.dragging {
+    opacity: 0.5;
+    background-color: var(--color-bg-secondary);
+}
+
+.category-header.drop-target {
+    background-color: var(--color-primary);
+    color: white;
+}
+
+.category-header.drop-target .category-count,
+.category-header.drop-target .disclosure-icon {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Category name and count styling */
+.category-name {
+    flex: 1;
+}
+
+.category-count {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-left: 0.5rem;
 }
 
 /* ===================================
