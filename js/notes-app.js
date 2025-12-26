@@ -949,6 +949,9 @@ const NotesApp = (() => {
             return;
         }
 
+        const includeTitleCheckbox = document.getElementById('pdf-include-title');
+        const includeTitle = includeTitleCheckbox ? includeTitleCheckbox.checked : true;
+
         const includeMetadataCheckbox = document.getElementById('pdf-include-metadata');
         const includeMetadata = includeMetadataCheckbox ? includeMetadataCheckbox.checked : true;
 
@@ -969,18 +972,38 @@ const NotesApp = (() => {
             }
 
             // Generate curl command
-            const createdDate = new Date(note.metadata.created)
-                .toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit'
-                })
-                .replace(/\//g, '-');
+            let createdDate;
+            const dateValue = note.metadata?.created;
+            if (dateValue && !isNaN(new Date(dateValue).getTime())) {
+                createdDate = new Date(dateValue)
+                    .toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    })
+                    .replace(/\//g, '-');
+            } else {
+                // Fallback to today's date if created date is invalid
+                createdDate = new Date()
+                    .toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    })
+                    .replace(/\//g, '-');
+            }
             const filename = `${note.title}_${createdDate}.pdf`.replace(/[^a-z0-9._-]/gi, '_');
 
             const protocol = window.location.protocol;
             const host = window.location.host;
-            const apiUrl = `${protocol}//${host}/api/export/note/${noteId}/pdf?includeMetadata=${includeMetadata}`;
+
+            // Get display settings for PDF export
+            // eslint-disable-next-line no-undef
+            const settings = await Storage.getSettings();
+            const font = settings.display?.font || 'system';
+            const paperSize = settings.display?.paperSize || 'a4';
+
+            const apiUrl = `${protocol}//${host}/api/export/note/${noteId}/pdf?includeTitle=${includeTitle}&includeMetadata=${includeMetadata}&font=${font}&paperSize=${paperSize}`;
             const curlCommand = `curl -o "${filename}" "${apiUrl}"`;
 
             // Show curl command in a modal

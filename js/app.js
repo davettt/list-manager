@@ -59,6 +59,12 @@
         // Apply saved theme
         UI.updateTheme(state.settings.display.theme);
 
+        // Apply saved font
+        UI.updateFont(state.settings.display.font || 'system');
+
+        // Apply saved font size
+        UI.updateFontSize(state.settings.display.fontSize || 100);
+
         // Apply saved view mode
         UI.updateViewMode(state.settings.display.view);
 
@@ -228,6 +234,15 @@
         document.getElementById('settings-close-btn')?.addEventListener('click', closeSettings);
         document.getElementById('test-api-btn')?.addEventListener('click', testApiConnection);
         document.getElementById('theme-select')?.addEventListener('change', changeTheme);
+        document.getElementById('font-select')?.addEventListener('change', changeFont);
+        document
+            .getElementById('font-size-decrease')
+            ?.addEventListener('click', () => changeFontSize(-10));
+        document
+            .getElementById('font-size-increase')
+            ?.addEventListener('click', () => changeFontSize(10));
+        document.getElementById('font-size-reset')?.addEventListener('click', resetFontSize);
+        document.getElementById('paper-size-select')?.addEventListener('change', changePaperSize);
         document.getElementById('ai-language-select')?.addEventListener('change', changeLanguage);
         document
             .getElementById('ai-enabled-checkbox')
@@ -1124,6 +1139,11 @@
         const apiKey = Utils.decodeBase64(state.settings.ai?.apiKey || state.settings.apiKey || '');
         document.getElementById('api-key-input').value = apiKey || '';
         document.getElementById('theme-select').value = state.settings.display.theme;
+        document.getElementById('font-select').value = state.settings.display.font || 'system';
+        const fontSize = state.settings.display.fontSize || 100;
+        document.getElementById('font-size-value').textContent = `${fontSize}%`;
+        document.getElementById('paper-size-select').value =
+            state.settings.display.paperSize || 'a4';
         document.getElementById('ai-enabled-checkbox').checked = state.settings.ai.enabled;
         document.getElementById('ai-language-select').value = state.settings.ai.language || 'en';
 
@@ -1140,6 +1160,44 @@
         state.settings = await Storage.getSettings();
         UI.updateTheme(theme);
         UI.showToast(`Theme changed to ${theme}`, 'success');
+    }
+
+    async function changeFont(e) {
+        const font = e.target.value;
+        await Storage.updateSetting('display.font', font);
+        state.settings = await Storage.getSettings();
+        UI.updateFont(font);
+        const fontNames = {
+            system: 'System Default',
+            classic: 'Classic',
+            serif: 'Modern Serif',
+            sans: 'Clean Sans',
+            mono: 'Typewriter',
+            readable: 'Accessible'
+        };
+        UI.showToast(`Font changed to ${fontNames[font] || font}`, 'success');
+    }
+
+    async function changeFontSize(delta) {
+        const currentSize = state.settings.display.fontSize || 100;
+        const newSize = UI.updateFontSize(currentSize + delta);
+        await Storage.updateSetting('display.fontSize', newSize);
+        state.settings = await Storage.getSettings();
+    }
+
+    async function resetFontSize() {
+        UI.updateFontSize(100);
+        await Storage.updateSetting('display.fontSize', 100);
+        state.settings = await Storage.getSettings();
+        UI.showToast('Font size reset to default', 'success');
+    }
+
+    async function changePaperSize(e) {
+        const paperSize = e.target.value;
+        await Storage.updateSetting('display.paperSize', paperSize);
+        state.settings = await Storage.getSettings();
+        const sizeNames = { a4: 'A4', letter: 'Letter', legal: 'Legal' };
+        UI.showToast(`PDF paper size set to ${sizeNames[paperSize] || paperSize}`, 'success');
     }
 
     async function changeLanguage(e) {
@@ -1243,6 +1301,8 @@
                     UI.populateTagFilter(state.lists);
                     renderLists();
                     UI.updateTheme(state.settings.display.theme);
+                    UI.updateFont(state.settings.display.font || 'system');
+                    UI.updateFontSize(state.settings.display.fontSize || 100);
                     UI.updateViewMode(state.settings.display.view);
                     updateAiButtonVisibility();
                     UI.showToast(result.message, 'success');
