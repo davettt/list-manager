@@ -580,42 +580,32 @@ Built with:
 
 ---
 
-**Version**: 1.7.0
-**Last Updated**: 2025-12-01
+**Version**: 1.9.0
+**Last Updated**: 2025-12-26
 
 Made with care for people who value privacy and simplicity.
 
-### What's New in v1.7.0
+### What's New in v1.9.0
 
-**Improve Writing** - Restructure and clarify your notes for better quality. This new AI writing tool analyzes your note and enhances it by improving structure, clarity, and precision while maintaining your original voice.
+**Subcategories for Notes** - Organize notes with hierarchical categories (up to 2 levels deep). Create subcategories like "Work/Projects" by clicking the "+" button that appears when hovering over a category.
 
-**Unified AI Menu** - All AI writing assistance tools are now accessible from a single "AI Options" dropdown menu for a cleaner interface.
+**Drag and Drop Notes** - Move notes between categories by dragging them to a category header. Visual feedback shows valid drop targets.
 
-### What's New in v1.6.0
+**Improved Category Dropdown** - The note editor category dropdown now shows subcategories with visual indentation.
 
-**Consider the Opposite** - Generate opposing viewpoints to challenge your thinking. Brief, thought-provoking counter-arguments help you explore alternative perspectives on your notes.
+### What's New in v1.8.0
 
-### What's New in v1.5.0
+**Notes FAB (Floating Action Button)** - Quick access to note functions from anywhere in the notes view. Toggle sidebar, create new note, import, and export actions.
 
-**PDF Export for Notes** - Export individual notes to PDF with formatted styling and optional metadata. Enhanced security with proper SSL/TLS certificate handling.
+**Improved Data Manager** - Clearer, safer import/export/clear operations with context-specific behavior for Lists and Notes pages.
 
 See [CHANGELOG.md](CHANGELOG.md) for full release details.
 
-### What's New in v1.4.0
+### What's New in v1.7.0
 
-**AI & Deployment Improvements:**
-- 🌐 **Remote Server Support** - API proxy now works on any domain (localhost, .local, remote servers)
-- 🚀 **Simplified Deployment** - Always uses backend proxy for AI requests (CORS-free)
-- 📧 **Server-Side API Keys** - Credentials stored securely server-side, not exposed to browser
-- ♻️ **Chunk-Based Grammar Check** - Long notes processed in sections for complete grammar review
-- ✨ **Smart Token Management** - Increased token limits to 8000 for better response quality
-- 🎯 **Better Error Handling** - Improved error messages and graceful fallbacks
-- ✅ **Code Quality** - All linting passes with zero warnings
+**Improve Writing** - Restructure and clarify your notes for better quality. This AI writing tool enhances structure, clarity, and precision while maintaining your original voice.
 
-**Code Cleanup:**
-- 🧹 **Debug Removal** - All debug console.log statements removed
-- 🔍 **Zero Warnings** - ESLint strict mode enforcement
-- 📝 **Better Comments** - Production-ready code documentation
+**Unified AI Menu** - All AI writing tools accessible from a single "AI Options" dropdown menu.
 
 ### What Was New in v1.3.0
 

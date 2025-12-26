@@ -550,7 +550,8 @@ const Storage = (function () {
      */
     async function deleteCategory(name) {
         try {
-            const response = await fetch(`/api/data/categories/${name}`, {
+            // URL-encode to handle "/" in subcategory paths (e.g., "work/projects")
+            const response = await fetch(`/api/data/categories/${encodeURIComponent(name)}`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' }
             });

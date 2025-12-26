@@ -33,6 +33,7 @@ const NotesApp = (() => {
 
     /**
      * Populate category dropdown with categories from NOTE_CATEGORIES
+     * Displays subcategories with visual hierarchy (indentation)
      */
     function populateCategoryDropdown() {
         const select = document.getElementById('note-category-select');
@@ -43,11 +44,26 @@ const NotesApp = (() => {
         // Clear existing options
         select.innerHTML = '';
 
+        // Sort categories for proper hierarchy display
+        const sortedCategories = [...NOTE_CATEGORIES].sort();
+
         // Add categories as options
-        NOTE_CATEGORIES.forEach(category => {
+        sortedCategories.forEach(category => {
             const option = document.createElement('option');
             option.value = category;
-            option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+
+            // Format display text with visual hierarchy
+            const parts = category.split('/');
+            if (parts.length > 1) {
+                // Subcategory: add indent and format nicely
+                const indent = '\u00A0\u00A0\u00A0\u00A0'; // Non-breaking spaces for indent
+                const displayName = parts[parts.length - 1];
+                option.textContent =
+                    indent + '└ ' + displayName.charAt(0).toUpperCase() + displayName.slice(1);
+            } else {
+                // Root category
+                option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+            }
             select.appendChild(option);
         });
     }
@@ -422,40 +438,153 @@ const NotesApp = (() => {
     }
 
     /**
-     * Group notes by category
+     * Build a category tree from flat path-based categories
+     * e.g., ["work", "work/projects", "personal"] becomes:
+     * { work: { _notes: [], children: { projects: { _notes: [], children: {} } } }, personal: { _notes: [], children: {} } }
      */
-    function groupNotesByCategory(notes) {
-        const groups = {};
+    function buildCategoryTree(notes, categories) {
+        const tree = {};
 
-        // Initialize empty groups for all categories
-        NOTE_CATEGORIES.forEach(cat => {
-            groups[cat] = [];
+        // Initialize tree structure from categories
+        categories.forEach(categoryPath => {
+            const parts = categoryPath.split('/');
+            let current = tree;
+
+            parts.forEach((part, index) => {
+                if (!current[part]) {
+                    current[part] = {
+                        _notes: [],
+                        _path: parts.slice(0, index + 1).join('/'),
+                        _expanded: true,
+                        children: {}
+                    };
+                }
+                if (index < parts.length - 1) {
+                    current = current[part].children;
+                }
+            });
         });
 
-        // Group notes by category
+        // Add notes to their categories
         notes.forEach(note => {
-            const category = note.category || 'other';
-            if (!groups[category]) {
-                groups[category] = [];
+            const categoryPath = note.category || 'other';
+            const parts = categoryPath.split('/');
+            let current = tree;
+
+            // Navigate to the correct category
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                if (!current[part]) {
+                    // Category doesn't exist, create it
+                    current[part] = {
+                        _notes: [],
+                        _path: parts.slice(0, i + 1).join('/'),
+                        _expanded: true,
+                        children: {}
+                    };
+                }
+                if (i === parts.length - 1) {
+                    // Add note to this category
+                    current[part]._notes.push(note);
+                } else {
+                    current = current[part].children;
+                }
             }
-            groups[category].push(note);
         });
 
-        // Sort notes within each category based on sort order
-        Object.keys(groups).forEach(category => {
-            if (noteSortOrder === 'alphabetical') {
-                groups[category].sort((a, b) => {
-                    return a.title.localeCompare(b.title);
-                });
-            } else {
-                // Sort by modified date (most recent first)
-                groups[category].sort((a, b) => {
-                    return new Date(b.metadata.modified) - new Date(a.metadata.modified);
-                });
-            }
-        });
+        // Sort notes within each category
+        function sortNotesInTree(node) {
+            Object.keys(node).forEach(key => {
+                if (key.startsWith('_')) {
+                    return;
+                }
 
-        return groups;
+                const category = node[key];
+                if (noteSortOrder === 'alphabetical') {
+                    category._notes.sort((a, b) => a.title.localeCompare(b.title));
+                } else {
+                    category._notes.sort(
+                        (a, b) => new Date(b.metadata.modified) - new Date(a.metadata.modified)
+                    );
+                }
+                sortNotesInTree(category.children);
+            });
+        }
+        sortNotesInTree(tree);
+
+        return tree;
+    }
+
+    /**
+     * Count total notes in a category tree node (including children)
+     */
+    function countNotesInCategory(categoryNode) {
+        let count = categoryNode._notes.length;
+        Object.keys(categoryNode.children).forEach(childKey => {
+            count += countNotesInCategory(categoryNode.children[childKey]);
+        });
+        return count;
+    }
+
+    /**
+     * Render a category tree node recursively
+     */
+    function renderCategoryNode(name, node, depth = 0) {
+        const totalNotes = countNotesInCategory(node);
+        const hasChildren = Object.keys(node.children).length > 0;
+        const isInCategories = NOTE_CATEGORIES.includes(node._path);
+
+        // Skip if no notes AND not a defined category AND no children
+        // (show empty categories that exist in NOTE_CATEGORIES so users can add notes to them)
+        if (totalNotes === 0 && !isInCategories && !hasChildren) {
+            return '';
+        }
+
+        const categoryPath = node._path;
+        const categoryName = name.charAt(0).toUpperCase() + name.slice(1);
+        const categoryId = `category-${categoryPath.replace(/\//g, '-')}`;
+        const indentClass = depth > 0 ? `depth-${depth}` : '';
+
+        let html = `
+        <div class="category-group ${indentClass}" data-category="${categoryPath}" data-depth="${depth}">
+            <button class="category-header expanded" data-category="${categoryPath}" id="${categoryId}">
+                <span class="disclosure-icon">▼</span>
+                <span>${categoryName}</span>
+                <span class="category-count">${totalNotes}</span>
+                <button class="category-add-btn" data-parent="${categoryPath}" title="Add subcategory">+</button>
+            </button>
+            <div class="category-content expanded">
+                <ul class="category-notes">
+                    ${node._notes
+                        .map(
+                            note => `
+                    <li class="note-item" data-note-id="${note.id}" draggable="true">
+                        <div class="note-item-content">
+                            <div class="note-item-title">${Utils.sanitizeHtml(note.title)}</div>
+                        </div>
+                        <div class="note-item-meta">
+                            <span class="note-item-date">${formatDate(note.metadata.modified)}</span>
+                        </div>
+                        ${note.favorite ? '<span class="note-item-favorite">★</span>' : ''}
+                    </li>
+                    `
+                        )
+                        .join('')}
+                </ul>`;
+
+        // Render children (subcategories) - only if depth < 1 (max 2 levels)
+        if (hasChildren && depth < 1) {
+            const childKeys = Object.keys(node.children).sort((a, b) => a.localeCompare(b));
+            childKeys.forEach(childKey => {
+                html += renderCategoryNode(childKey, node.children[childKey], depth + 1);
+            });
+        }
+
+        html += `
+            </div>
+        </div>`;
+
+        return html;
     }
 
     /**
@@ -474,63 +603,38 @@ const NotesApp = (() => {
             return;
         }
 
-        // Group notes by category
-        const groupedNotes = groupNotesByCategory(filteredNotes);
+        // Build category tree
+        const categoryTree = buildCategoryTree(filteredNotes, NOTE_CATEGORIES);
 
-        // Sort categories based on sort order
-        let categoryOrder;
-        if (categorySortOrder === 'alphabetical') {
-            categoryOrder = Object.keys(groupedNotes).sort((a, b) => a.localeCompare(b));
-        } else {
-            // Custom order (from API)
-            categoryOrder = NOTE_CATEGORIES.filter(cat => cat in groupedNotes);
-        }
+        // Get root categories (those without "/" in their path)
+        const rootCategories = Object.keys(categoryTree).sort((a, b) => a.localeCompare(b));
 
         // Render categories
         let html = '';
-        categoryOrder.forEach(category => {
-            const notes = groupedNotes[category];
-            if (notes.length === 0) {
-                return;
-            }
-
-            // Format category name
-            const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
-            const categoryId = `category-${category}`;
-
-            html += `
-            <div class="category-group" data-category="${category}">
-                <button class="category-header expanded" data-category="${category}" id="${categoryId}">
-                    <span class="disclosure-icon">▼</span>
-                    <span>${categoryName}</span>
-                    <span style="font-size: 0.75rem; color: var(--color-text-muted); margin-left: auto;">${notes.length}</span>
-                </button>
-                <ul class="category-notes expanded">
-                    ${notes
-                        .map(
-                            note => `
-                    <li class="note-item" data-note-id="${note.id}">
-                        <div class="note-item-content">
-                            <div class="note-item-title">${Utils.sanitizeHtml(note.title)}</div>
-                        </div>
-                        <div class="note-item-meta">
-                            <span class="note-item-date">${formatDate(note.metadata.modified)}</span>
-                        </div>
-                        ${note.favorite ? '<span class="note-item-favorite">★</span>' : ''}
-                    </li>
-                    `
-                        )
-                        .join('')}
-                </ul>
-            </div>
-            `;
+        rootCategories.forEach(categoryName => {
+            html += renderCategoryNode(categoryName, categoryTree[categoryName], 0);
         });
+
+        // Add "Add Category" button at bottom
+        html += `
+        <div class="add-category-container">
+            <button class="add-category-btn" id="add-root-category-btn">
+                <span>+</span> Add Category
+            </button>
+        </div>`;
 
         categoriesContainer.innerHTML = html;
 
-        // Add event listeners for category headers
+        // Add event listeners for category headers (click to toggle, not on add button)
         document.querySelectorAll('.category-header').forEach(header => {
-            header.addEventListener('click', toggleCategory);
+            header.addEventListener('click', e => {
+                // Don't toggle if clicking the add button
+                if (e.target.classList.contains('category-add-btn')) {
+                    e.stopPropagation();
+                    return;
+                }
+                toggleCategory(e);
+            });
         });
 
         // Add click handlers for note items
@@ -538,6 +642,124 @@ const NotesApp = (() => {
             item.addEventListener('click', () => {
                 const noteId = item.dataset.noteId;
                 selectNote(noteId, item);
+            });
+        });
+
+        // Add category button handlers
+        document.querySelectorAll('.category-add-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                const parentCategory = btn.dataset.parent;
+                promptAddCategory(parentCategory);
+            });
+        });
+
+        // Add root category button handler
+        const addRootBtn = document.getElementById('add-root-category-btn');
+        if (addRootBtn) {
+            addRootBtn.addEventListener('click', () => promptAddCategory(null));
+        }
+
+        // Setup drag and drop
+        setupDragAndDrop();
+
+        // Restore category expansion state
+        restoreCategoryState();
+    }
+
+    /**
+     * Prompt user to add a new category
+     */
+    function promptAddCategory(parentCategory) {
+        const categoryName = prompt(
+            parentCategory ? `Add subcategory under "${parentCategory}":` : 'Add new category:'
+        );
+
+        if (!categoryName || !categoryName.trim()) {
+            return;
+        }
+
+        const cleanName = categoryName
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9-]/g, '-');
+        const fullPath = parentCategory ? `${parentCategory}/${cleanName}` : cleanName;
+
+        // Check max depth (2 levels)
+        if (fullPath.split('/').length > 2) {
+            showToast('Maximum category depth is 2 levels', 'error');
+            return;
+        }
+
+        // Add category via API
+        Storage.addCategory(fullPath)
+            .then(() => {
+                NOTE_CATEGORIES.push(fullPath);
+                showToast(`Category "${cleanName}" added`, 'success');
+                filterNotes(); // Re-render
+            })
+            .catch(err => {
+                showToast(err.message || 'Failed to add category', 'error');
+            });
+    }
+
+    /**
+     * Setup drag and drop for notes
+     */
+    function setupDragAndDrop() {
+        let draggedNoteId = null;
+
+        // Make note items draggable
+        document.querySelectorAll('.note-item').forEach(item => {
+            item.addEventListener('dragstart', e => {
+                draggedNoteId = item.dataset.noteId;
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+                document.querySelectorAll('.drop-target').forEach(el => {
+                    el.classList.remove('drop-target');
+                });
+            });
+        });
+
+        // Make category headers drop targets
+        document.querySelectorAll('.category-header').forEach(header => {
+            header.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                header.classList.add('drop-target');
+            });
+
+            header.addEventListener('dragleave', () => {
+                header.classList.remove('drop-target');
+            });
+
+            header.addEventListener('drop', async e => {
+                e.preventDefault();
+                header.classList.remove('drop-target');
+
+                if (!draggedNoteId) {
+                    return;
+                }
+
+                const targetCategory = header.dataset.category;
+                const note = allNotes.find(n => n.id === draggedNoteId);
+
+                if (note && note.category !== targetCategory) {
+                    try {
+                        await NotesStorage.updateNote(draggedNoteId, { category: targetCategory });
+                        note.category = targetCategory;
+                        showToast(`Moved to ${targetCategory}`, 'success');
+                        filterNotes(); // Re-render
+                    } catch (err) {
+                        showToast('Failed to move note', 'error');
+                    }
+                }
+
+                draggedNoteId = null;
             });
         });
     }
@@ -549,11 +771,13 @@ const NotesApp = (() => {
         const header = e.currentTarget;
         const category = header.dataset.category;
         const categoryGroup = header.closest('.category-group');
-        const notesList = categoryGroup.querySelector('.category-notes');
+        const content = categoryGroup.querySelector(':scope > .category-content');
 
         header.classList.toggle('expanded');
         header.classList.toggle('collapsed');
-        notesList.classList.toggle('expanded');
+        if (content) {
+            content.classList.toggle('expanded');
+        }
 
         // Store expansion state in localStorage
         const expandedCategories = JSON.parse(localStorage.getItem('expandedCategories') || '{}');
@@ -570,21 +794,22 @@ const NotesApp = (() => {
         document.querySelectorAll('.category-header').forEach(header => {
             const category = header.dataset.category;
             const isExpanded = expandedCategories[category] !== false; // Default to expanded
+            const content = header
+                .closest('.category-group')
+                .querySelector(':scope > .category-content');
 
             if (!isExpanded) {
                 header.classList.remove('expanded');
                 header.classList.add('collapsed');
-                header
-                    .closest('.category-group')
-                    .querySelector('.category-notes')
-                    .classList.remove('expanded');
+                if (content) {
+                    content.classList.remove('expanded');
+                }
             } else {
                 header.classList.add('expanded');
                 header.classList.remove('collapsed');
-                header
-                    .closest('.category-group')
-                    .querySelector('.category-notes')
-                    .classList.add('expanded');
+                if (content) {
+                    content.classList.add('expanded');
+                }
             }
         });
     }
