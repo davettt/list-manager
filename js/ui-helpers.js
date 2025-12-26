@@ -335,6 +335,37 @@ const UI = (function () {
     }
 
     /**
+     * Update font family
+     * @param {string} font - 'system', 'serif', 'sans', 'mono', or 'readable'
+     */
+    function updateFont(font) {
+        const fontMap = {
+            system: 'var(--font-family-system)',
+            serif: 'var(--font-family-serif)',
+            sans: 'var(--font-family-sans)',
+            mono: 'var(--font-family-mono)',
+            readable: 'var(--font-family-readable)',
+            classic: 'var(--font-family-classic)'
+        };
+        const fontValue = fontMap[font] || fontMap.system;
+        document.documentElement.style.setProperty('--font-family-base', fontValue);
+    }
+
+    /**
+     * Update font size scale
+     * @param {number} scale - Font size as percentage (75-150)
+     */
+    function updateFontSize(scale) {
+        const clampedScale = Math.max(75, Math.min(150, scale));
+        document.documentElement.style.setProperty('--font-size-scale', clampedScale);
+        const valueEl = document.getElementById('font-size-value');
+        if (valueEl) {
+            valueEl.textContent = `${clampedScale}%`;
+        }
+        return clampedScale;
+    }
+
+    /**
      * Populate category filter options
      * @param {Array} lists - Array of lists
      */
@@ -424,6 +455,8 @@ const UI = (function () {
         createSuggestionElement,
         updateViewMode,
         updateTheme,
+        updateFont,
+        updateFontSize,
         populateCategoryFilter,
         populateTagFilter,
         clearForm,

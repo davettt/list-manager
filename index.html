@@ -988,6 +988,74 @@
                                 <option value="auto">Auto (System)</option>
                             </select>
                         </div>
+                        <div class="settings-group">
+                            <label for="font-select">Font Family</label>
+                            <select id="font-select">
+                                <option value="system">System Default</option>
+                                <option value="classic">Classic (Palatino)</option>
+                                <option value="serif">Modern Serif (Charter)</option>
+                                <option value="sans">Clean Sans (Avenir)</option>
+                                <option value="mono">Typewriter (Monospace)</option>
+                                <option value="readable">Accessible (Verdana)</option>
+                            </select>
+                        </div>
+                        <div class="settings-group">
+                            <label>Font Size</label>
+                            <div class="font-size-controls">
+                                <button
+                                    type="button"
+                                    id="font-size-decrease"
+                                    class="btn btn-secondary font-size-btn"
+                                    aria-label="Decrease font size"
+                                >
+                                    <svg
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                </button>
+                                <span id="font-size-value" class="font-size-value">100%</span>
+                                <button
+                                    type="button"
+                                    id="font-size-increase"
+                                    class="btn btn-secondary font-size-btn"
+                                    aria-label="Increase font size"
+                                >
+                                    <svg
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                </button>
+                                <button
+                                    type="button"
+                                    id="font-size-reset"
+                                    class="btn btn-secondary"
+                                    aria-label="Reset font size"
+                                >
+                                    Reset
+                                </button>
+                            </div>
+                        </div>
+                        <div class="settings-group">
+                            <label for="paper-size-select">PDF Paper Size</label>
+                            <select id="paper-size-select">
+                                <option value="a4">A4 (210 x 297 mm)</option>
+                                <option value="letter">Letter (8.5 x 11 in)</option>
+                                <option value="legal">Legal (8.5 x 14 in)</option>
+                            </select>
+                        </div>
                     </section>
 
                     <!-- Data Management -->
@@ -1246,6 +1314,12 @@
                 </div>
 
                 <div class="modal-body">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="pdf-include-title" checked />
+                            <span>Include title header</span>
+                        </label>
+                    </div>
                     <div class="form-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="pdf-include-metadata" checked />

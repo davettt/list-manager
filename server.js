@@ -1317,6 +1317,14 @@ async function handlePdfExport(req, res) {
     try {
         const { id } = req.params;
         // Support both JSON body and form data/query params
+        let includeTitle = true;
+        if (req.body && typeof req.body.includeTitle !== 'undefined') {
+            includeTitle = req.body.includeTitle !== 'false' && req.body.includeTitle !== false;
+        }
+        if (req.query && typeof req.query.includeTitle !== 'undefined') {
+            includeTitle = req.query.includeTitle !== 'false' && req.query.includeTitle !== false;
+        }
+
         let includeMetadata = true;
         if (req.body && typeof req.body.includeMetadata !== 'undefined') {
             includeMetadata =
@@ -1326,6 +1334,27 @@ async function handlePdfExport(req, res) {
             includeMetadata =
                 req.query.includeMetadata !== 'false' && req.query.includeMetadata !== false;
         }
+
+        // Get font preference (default: system)
+        const fontPref = req.query.font || req.body?.font || 'system';
+        const fontFamilyMap = {
+            system: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+            classic: "'Palatino Linotype', Palatino, 'Book Antiqua', 'URW Palladio L', serif",
+            serif: "Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif",
+            sans: "'Avenir Next', Avenir, 'Helvetica Neue', Helvetica, 'Segoe UI', sans-serif",
+            mono: "ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+            readable: "'Atkinson Hyperlegible', Calibri, Verdana, 'DejaVu Sans', sans-serif"
+        };
+        const fontFamily = fontFamilyMap[fontPref] || fontFamilyMap.system;
+
+        // Get paper size preference (default: a4)
+        const paperSizePref = req.query.paperSize || req.body?.paperSize || 'a4';
+        const paperSizeMap = {
+            a4: 'A4',
+            letter: 'Letter',
+            legal: 'Legal'
+        };
+        const paperSize = paperSizeMap[paperSizePref] || 'A4';
 
         // Validate ID format
         if (!id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
@@ -1405,7 +1434,7 @@ async function handlePdfExport(req, res) {
                 <title>${note.title}</title>
                 <style>
                     body {
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        font-family: ${fontFamily};
                         line-height: 1.6;
                         color: #333;
                         padding: 0;
@@ -1435,7 +1464,7 @@ async function handlePdfExport(req, res) {
                 </style>
             </head>
             <body>
-                <div class="note-title">${note.title}</div>
+                ${includeTitle ? `<div class="note-title">${note.title}</div>` : ''}
                 ${metadataHtml}
                 <div class="content">${contentHtml}</div>
             </body>
@@ -1443,13 +1472,26 @@ async function handlePdfExport(req, res) {
         `;
 
         // Set response headers
-        const createdDate = new Date(note.metadata.created)
-            .toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-            })
-            .replace(/\//g, '-');
+        let createdDate;
+        const dateValue = note.metadata?.created;
+        if (dateValue && !isNaN(new Date(dateValue).getTime())) {
+            createdDate = new Date(dateValue)
+                .toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                })
+                .replace(/\//g, '-');
+        } else {
+            // Fallback to today's date if created date is invalid
+            createdDate = new Date()
+                .toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                })
+                .replace(/\//g, '-');
+        }
         const filename = `${note.title}_${createdDate}.pdf`.replace(/[^a-z0-9._-]/gi, '_');
 
         res.setHeader('Content-Type', 'application/pdf');
@@ -1460,7 +1502,7 @@ async function handlePdfExport(req, res) {
         await page.setContent(html, { waitUntil: 'networkidle0' });
 
         const pdfBuffer = await page.pdf({
-            format: 'A4',
+            format: paperSize,
             margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' }
         });
 
