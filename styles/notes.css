@@ -659,9 +659,11 @@ main.main-content > .container {
     overflow: hidden;
 }
 
-/* Metadata Section */
+/* Metadata Section - top padding calculated to align with sidebar toggle at 5rem */
+/* Header ~4rem, so content starts at 4rem. Sidebar toggle at 5rem = 1rem below content start */
+/* Title input has 0.5rem top padding, so metadata needs ~0.5rem top to align input text with button */
 .note-metadata {
-    padding: 1.5rem;
+    padding: 0.5rem 1.5rem 1rem 3rem;
     border-bottom: 1px solid var(--color-border);
     background-color: var(--color-background);
 }
@@ -673,7 +675,7 @@ main.main-content > .container {
     padding: 0.5rem 0;
     border: none;
     background: transparent;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     font-family: inherit;
 }
 
@@ -689,31 +691,31 @@ main.main-content > .container {
     align-items: center;
 }
 
-.note-metadata-row select {
-    padding: 0.4rem 0.6rem;
-    border: 2px solid var(--color-border);
-    border-radius: var(--border-radius);
-    font-size: 0.875rem;
-    background-color: var(--color-surface);
-    color: var(--color-text);
+#note-category-select {
+    width: auto;
+    min-width: 150px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    padding-right: 2rem;
+    font-size: 1rem;
+    font-family: inherit;
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-md);
+    background-color: var(--color-input-bg);
+    color: var(--color-text-primary);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    -webkit-appearance: none;
+    -moz-appearance: none;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 8px center;
-    padding-right: 2rem;
+    transition: all var(--transition-fast);
 }
 
-.note-metadata-row select:hover {
-    border-color: var(--color-primary);
-    background-color: var(--color-surface);
-}
-
-.note-metadata-row select:focus {
+#note-category-select:focus {
     outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    border-color: var(--color-input-focus);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
 /* Controls Section */
@@ -1236,7 +1238,7 @@ main.main-content > .container {
 .notes-fab-container {
     position: fixed;
     top: 8rem;
-    /* left is set dynamically via JS to align with sidebar */
+    /* left is set dynamically via JS */
     z-index: 60;
     display: none; /* Hidden by default, shown via JS when notes tab is active */
     flex-direction: column;
@@ -1366,6 +1368,136 @@ main.main-content > .container {
 }
 
 /* ===================================
+   Lists FAB (Floating Action Button)
+   =================================== */
+
+.lists-fab-container {
+    position: fixed;
+    /* top and left are set dynamically via JS to align with search bar */
+    z-index: 60;
+    display: none; /* Hidden by default, shown via JS when lists tab is active */
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    pointer-events: none;
+}
+
+.lists-fab-container > * {
+    pointer-events: auto;
+}
+
+.lists-fab-trigger {
+    padding: 0.5rem;
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        box-shadow 0.15s ease;
+    color: var(--color-text-secondary);
+}
+
+.lists-fab-trigger:hover {
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-secondary);
+    border-color: var(--color-border-secondary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: scale(1.05);
+}
+
+.lists-fab-trigger:active {
+    transform: scale(0.95);
+}
+
+.lists-fab-trigger .fab-icon-open {
+    display: block;
+    transition:
+        transform 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.lists-fab-trigger .fab-icon-close {
+    display: none;
+    position: absolute;
+    transition:
+        transform 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.lists-fab-container.open .lists-fab-trigger .fab-icon-open {
+    display: none;
+}
+
+.lists-fab-container.open .lists-fab-trigger .fab-icon-close {
+    display: block;
+}
+
+.lists-fab-container.open .lists-fab-trigger {
+    background-color: var(--color-bg-secondary);
+    border-color: var(--color-border-secondary);
+}
+
+.lists-fab-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px) scale(0.9);
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease,
+        visibility 0.2s ease;
+}
+
+.lists-fab-container.open .lists-fab-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+
+.lists-fab-action {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition:
+        background-color 0.15s ease,
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+    white-space: nowrap;
+    font-family: inherit;
+    color: var(--color-text-secondary);
+}
+
+.lists-fab-action:hover {
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-secondary);
+    border-color: var(--color-border-secondary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.lists-fab-action:active {
+    transform: scale(0.98);
+}
+
+.lists-fab-action svg {
+    flex-shrink: 0;
+    color: inherit;
+}
+
+/* ===================================
    Responsive Design
    =================================== */
 
@@ -1492,22 +1624,17 @@ main.main-content > .container {
         color: #e0e0e0;
     }
 
-    /* Dark mode select/dropdown improvements */
-    .note-metadata-row select {
-        background-color: #374151;
-        color: #f9fafb;
-        border-color: #4b5563;
+    /* Dark mode category select - matches input style */
+    #note-category-select {
+        background-color: var(--color-input-bg);
+        color: var(--color-text-primary);
+        border-color: var(--color-border-primary);
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23d1d5db' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     }
 
-    .note-metadata-row select:hover {
-        background-color: #4b5563;
-        border-color: #60a5fa;
-    }
-
-    .note-metadata-row select:focus {
-        border-color: #60a5fa;
-        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+    #note-category-select:focus {
+        border-color: var(--color-input-focus);
+        box-shadow: 0 0 0 3px var(--color-primary-light);
     }
 }
 

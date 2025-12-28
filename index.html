@@ -601,7 +601,95 @@
                     </div>
                 </div>
 
-                <!-- Sidebar Toggle Button (fixed position) -->
+                <!-- Lists FAB (Floating Action Button) -->
+                <div id="lists-fab" class="lists-fab-container">
+                    <button
+                        class="lists-fab-trigger"
+                        id="lists-fab-trigger"
+                        aria-label="Quick actions"
+                    >
+                        <svg
+                            class="fab-icon-open"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <svg
+                            class="fab-icon-close"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                    <div class="lists-fab-menu" id="lists-fab-menu">
+                        <button class="lists-fab-action" id="fab-new-list" aria-label="New list">
+                            <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            <span class="fab-action-label">New List</span>
+                        </button>
+                        <button
+                            class="lists-fab-action"
+                            id="fab-import-list"
+                            aria-label="Import lists"
+                        >
+                            <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <span class="fab-action-label">Import</span>
+                        </button>
+                        <button
+                            class="lists-fab-action"
+                            id="fab-export-list"
+                            aria-label="Export all lists"
+                        >
+                            <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            <span class="fab-action-label">Export</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sidebar Toggle Button (fixed position, Notes only) -->
                 <button
                     id="sidebar-toggle-btn"
                     class="sidebar-toggle-btn"
@@ -710,8 +798,8 @@
         <!-- Footer Actions -->
         <footer class="app-footer">
             <div class="container footer-actions">
-                <!-- Lists Footer Actions -->
-                <div id="lists-footer-actions" class="footer-actions-group">
+                <!-- Lists Footer Actions (hidden, replaced by FAB) -->
+                <div id="lists-footer-actions" class="footer-actions-group" style="display: none">
                     <button id="new-list-btn" class="btn btn-primary">
                         <svg
                             width="20"
