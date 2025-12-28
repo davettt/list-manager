@@ -172,6 +172,7 @@ a:hover {
 .search-bar {
     position: relative;
     margin-bottom: var(--spacing-md);
+    margin-left: 3rem; /* Space for FAB button */
 }
 
 .search-bar input {

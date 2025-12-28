@@ -70,6 +70,12 @@
 
         // Update AI button visibility
         updateAiButtonVisibility();
+
+        // Initialize Lists FAB
+        initializeListsFAB();
+
+        // Position Lists FAB initially
+        requestAnimationFrame(positionListsFab);
     }
 
     async function loadData() {
@@ -1452,6 +1458,111 @@
             confirmBtn.textContent = confirmBtn.dataset.originalText || 'Import';
         }
     }
+
+    // ===================================
+    // Lists FAB (Floating Action Button)
+    // ===================================
+
+    /**
+     * Position the Lists FAB relative to the search bar
+     */
+    function positionListsFab() {
+        const listsView = document.getElementById('lists-view');
+        const fabContainer = document.getElementById('lists-fab');
+        const searchBar = listsView?.querySelector('.search-bar');
+
+        if (!listsView || !fabContainer || !searchBar) {
+            return;
+        }
+
+        // Only position if lists view is visible
+        if (listsView.style.display === 'none') {
+            return;
+        }
+
+        const searchRect = searchBar.getBoundingClientRect();
+
+        // Retry if content hasn't laid out yet
+        if (searchRect.width === 0) {
+            setTimeout(positionListsFab, 50);
+            return;
+        }
+
+        // Position FAB to the left of search bar, vertically centered with it
+        const listsRect = listsView.getBoundingClientRect();
+        fabContainer.style.left = `${listsRect.left}px`;
+        fabContainer.style.top = `${searchRect.top}px`;
+    }
+
+    /**
+     * Initialize Lists FAB (Floating Action Button)
+     */
+    function initializeListsFAB() {
+        const fabContainer = document.getElementById('lists-fab');
+        const fabTrigger = document.getElementById('lists-fab-trigger');
+        const fabNewList = document.getElementById('fab-new-list');
+        const fabImport = document.getElementById('fab-import-list');
+        const fabExport = document.getElementById('fab-export-list');
+
+        if (!fabTrigger) {
+            return;
+        }
+
+        // Show FAB initially (lists tab is active by default)
+        if (fabContainer) {
+            fabContainer.style.display = 'flex';
+        }
+
+        // Toggle FAB menu
+        fabTrigger.addEventListener('click', e => {
+            e.stopPropagation();
+            fabContainer.classList.toggle('open');
+        });
+
+        // Close FAB when clicking outside
+        document.addEventListener('click', e => {
+            if (fabContainer && !fabContainer.contains(e.target)) {
+                fabContainer.classList.remove('open');
+            }
+        });
+
+        // FAB action: New List
+        if (fabNewList) {
+            fabNewList.addEventListener('click', () => {
+                createNewList();
+                fabContainer.classList.remove('open');
+            });
+        }
+
+        // FAB action: Import
+        if (fabImport) {
+            fabImport.addEventListener('click', () => {
+                importLists();
+                fabContainer.classList.remove('open');
+            });
+        }
+
+        // FAB action: Export
+        if (fabExport) {
+            fabExport.addEventListener('click', () => {
+                exportLists();
+                fabContainer.classList.remove('open');
+            });
+        }
+
+        // Close FAB on Escape key
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && fabContainer.classList.contains('open')) {
+                fabContainer.classList.remove('open');
+            }
+        });
+
+        // Reposition on window resize
+        window.addEventListener('resize', positionListsFab);
+    }
+
+    // Make positionListsFab available globally for tab switching
+    window.positionListsFab = positionListsFab;
 
     async function clearAllData() {
         // First warning with details

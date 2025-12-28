@@ -117,6 +117,7 @@ const NotesApp = (() => {
         const notesView = elements.notesView();
         const listsFooter = document.getElementById('lists-footer-actions');
         const notesFab = document.getElementById('notes-fab');
+        const listsFab = document.getElementById('lists-fab');
         const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
 
         if (listsTabBtn && notesTabBtn && listsView && notesView) {
@@ -125,10 +126,18 @@ const NotesApp = (() => {
                 notesTabBtn.classList.remove('active');
                 listsView.style.display = 'block';
                 notesView.style.display = 'none';
+                // Hide lists footer (replaced by FAB)
                 if (listsFooter) {
-                    listsFooter.style.display = 'flex';
+                    listsFooter.style.display = 'none';
                 }
-                // Hide FAB and sidebar toggle on lists page
+                // Show Lists FAB, hide Notes FAB and sidebar toggle
+                if (listsFab) {
+                    listsFab.style.display = 'flex';
+                    // Position FAB after display change
+                    if (typeof window.positionListsFab === 'function') {
+                        requestAnimationFrame(window.positionListsFab);
+                    }
+                }
                 if (notesFab) {
                     notesFab.style.display = 'none';
                 }
@@ -136,7 +145,7 @@ const NotesApp = (() => {
                     sidebarToggleBtn.style.display = 'none';
                 }
                 // Remove notes-active class from main-content
-                const mainContent = document.querySelector('main > .main-content');
+                const mainContent = document.querySelector('main.main-content');
                 if (mainContent) {
                     mainContent.classList.remove('notes-active');
                 }
@@ -149,10 +158,14 @@ const NotesApp = (() => {
                 listsTabBtn.classList.remove('active');
                 listsView.style.display = 'none';
                 notesView.style.display = 'block';
+                // Hide lists footer
                 if (listsFooter) {
                     listsFooter.style.display = 'none';
                 }
-                // Show FAB and sidebar toggle on notes page
+                // Hide Lists FAB, show Notes FAB and sidebar toggle
+                if (listsFab) {
+                    listsFab.style.display = 'none';
+                }
                 if (notesFab) {
                     notesFab.style.display = 'flex';
                 }
@@ -162,7 +175,7 @@ const NotesApp = (() => {
                     requestAnimationFrame(positionSidebarToggle);
                 }
                 // Add class to main-content to remove padding
-                const mainContent = document.querySelector('main > .main-content');
+                const mainContent = document.querySelector('main.main-content');
                 if (mainContent) {
                     mainContent.classList.add('notes-active');
                 }
@@ -356,12 +369,13 @@ const NotesApp = (() => {
     }
 
     /**
-     * Position the sidebar toggle button relative to the sidebar
+     * Position the sidebar toggle button and FAB horizontally
      */
     function positionSidebarToggle() {
         const notesView = document.getElementById('notes-view');
         const toggleBtn = document.getElementById('sidebar-toggle-btn');
         const fabContainer = document.getElementById('notes-fab');
+
         if (!notesView || !toggleBtn) {
             return;
         }
@@ -371,7 +385,7 @@ const NotesApp = (() => {
             return;
         }
 
-        // Get the container inside notes-view (this is the positioned parent of the sidebar)
+        // Get the container inside notes-view
         const container = notesView.querySelector('.container');
         if (!container) {
             return;
@@ -384,7 +398,7 @@ const NotesApp = (() => {
             return;
         }
 
-        // Position buttons at the left edge of the container (CSS margin-left offsets further)
+        // Position buttons at the left edge of the container (horizontal only)
         toggleBtn.style.left = `${containerRect.left}px`;
         if (fabContainer) {
             fabContainer.style.left = `${containerRect.left}px`;

@@ -8,10 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Upcoming
 
 ### Under Consideration
-- **UI: List Manager Consistency** - Apply Notes Manager button styling and FAB to Lists page for unified design
 - **AI: Habit Builder** - Generate actionable habits or behavior changes based on productivity notes (may be contextual)
 - **AI: Think Deeper** - Additional analysis options to challenge and expand thinking on specific note types
 - **Performance**: Explore lighter weight AI models or caching for frequent queries
+
+---
+
+## [1.11.0] - 2025-12-28
+
+### Added
+- ➕ **Lists FAB (Floating Action Button)** - Quick actions for list management
+  - New List, Import, and Export actions accessible from FAB
+  - Positioned to align with search bar for visual consistency
+  - Matches Notes FAB styling (subtle bordered style)
+
+### Changed
+- 🎨 **Unified UI Design** - Consistent styling between Lists and Notes pages
+  - Category select styled to match title input (same border, padding, focus states)
+  - Note metadata aligned vertically with sidebar toggle and FAB buttons
+  - Lists footer actions replaced by FAB for cleaner interface
+
+### Fixed
+- Fixed `.notes-active` class not being applied to main content (incorrect JS selector)
+- Fixed note metadata vertical alignment with fixed-position buttons
 
 ---
 
