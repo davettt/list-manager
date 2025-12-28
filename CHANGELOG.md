@@ -8,10 +8,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Upcoming
 
 ### Under Consideration
+- **UI: List Manager Consistency** - Apply Notes Manager button styling and FAB to Lists page for unified design
 - **AI: Habit Builder** - Generate actionable habits or behavior changes based on productivity notes (may be contextual)
 - **AI: Think Deeper** - Additional analysis options to challenge and expand thinking on specific note types
 - **Performance**: Explore lighter weight AI models or caching for frequent queries
-- **Theming**: Font family options and visual theme customization
+
+---
+
+## [1.10.0] - 2025-12-27
+
+### Added
+- 🎨 **Font Family Options** - Choose from 6 privacy-respecting font stacks
+  - System Default, Classic (Palatino), Modern Serif (Charter), Clean Sans (Avenir), Monospace, and Readable (Atkinson)
+  - All fonts use system-installed fonts only (no external font services)
+  - Font choice applies consistently across entire UI including buttons, inputs, and sidebar
+- 📏 **Font Size Adjustment** - Scale text size from 75% to 150%
+  - +/- buttons in Settings with Reset to default
+  - Applies globally to all text in the application
+- 📄 **Enhanced PDF Export** - More export customization options
+  - Paper size selection: A4, Letter, Legal (defaults to A4)
+  - Option to include/exclude title header in export
+  - Exported PDF uses your selected font family
+- 🗂️ **Sidebar Toggle Button** - Always-visible button to toggle notes sidebar
+  - Fixed position at top-left of editor area (stays visible when scrolling)
+  - Works alongside keyboard shortcut
+- ⌨️ **Keyboard Shortcuts** - Quick access to common actions
+  - `Cmd/Ctrl + B`: Toggle sidebar
+  - `Cmd/Ctrl + N`: Create new note
+
+### Changed
+- Subcategories now render above notes within a category for better visual hierarchy
+- "Add subcategory" button only appears on root categories (max 2 levels enforced)
+- Font now applies consistently to category headers, FAB actions, and all form elements
+- FAB (Floating Action Button) restyled and repositioned for UI consistency
+  - Moved to left side, aligned below sidebar toggle button
+  - Subtle bordered style matching sidebar toggle button
+  - Removed redundant "Open Sidebar" option (now handled by dedicated button)
+
+### Fixed
+- Fixed font not applying to buttons, inputs, and form elements
+- Fixed "Invalid Date" appearing in exported PDF filenames when note creation date was missing
+- Fixed subcategory creation allowing more than 2 levels deep
+- Fixed sidebar toggle button scrolling out of view (now fixed position)
+- Increased note title display width in sidebar (shows more characters before truncation)
 
 ---
 

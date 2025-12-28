@@ -222,7 +222,7 @@ main.main-content > .container {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem;
+    padding: 0.5rem 1rem 1rem 3rem;
     border-bottom: 1px solid var(--color-border);
     background-color: var(--color-bg-primary);
     flex-shrink: 0;
@@ -517,7 +517,7 @@ main.main-content > .container {
 
 .category-notes .note-item-title {
     font-size: 0.85rem;
-    max-width: 150px;
+    max-width: 200px;
 }
 
 .category-notes .note-item-meta {
@@ -577,27 +577,36 @@ main.main-content > .container {
     position: relative;
     margin: 0;
     padding: 0;
+    overflow: hidden;
 }
 
-/* Editor Header with Toggle Button */
-.editor-header {
-    display: flex;
-    align-items: center;
-    height: auto;
-    padding: 0.25rem 0.25rem;
-    background-color: transparent;
-    flex-shrink: 0;
-}
-
+/* Sidebar Toggle Button - Fixed position, aligned with sidebar */
 .sidebar-toggle-btn {
+    position: fixed;
+    top: 5rem;
+    /* left is set dynamically via JS */
+    z-index: 60;
     padding: 0.5rem;
+    background-color: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
     color: var(--color-text-secondary);
+    cursor: pointer;
+    display: none; /* Hidden by default, shown via JS when notes tab is active */
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        box-shadow 0.15s ease;
 }
 
 .sidebar-toggle-btn:hover {
     color: var(--color-text-primary);
     background-color: var(--color-bg-secondary);
-    border-radius: var(--radius-md);
+    border-color: var(--color-border-secondary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* ===================================
@@ -1226,12 +1235,12 @@ main.main-content > .container {
 
 .notes-fab-container {
     position: fixed;
-    top: 5rem;
-    right: 1.5rem;
-    z-index: 60; /* Below note controls but above sidebar */
+    top: 8rem;
+    /* left is set dynamically via JS to align with sidebar */
+    z-index: 60;
     display: none; /* Hidden by default, shown via JS when notes tab is active */
     flex-direction: column;
-    align-items: flex-end;
+    align-items: flex-start;
     gap: 0.5rem;
     pointer-events: none; /* Allow clicks to pass through container */
 }
@@ -1241,26 +1250,27 @@ main.main-content > .container {
 }
 
 .notes-fab-trigger {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background-color: var(--color-primary);
-    border: none;
+    padding: 0.5rem;
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     transition:
-        transform 0.2s ease,
-        background-color 0.2s ease,
-        box-shadow 0.2s ease;
-    color: white;
+        background-color 0.15s ease,
+        color 0.15s ease,
+        box-shadow 0.15s ease;
+    color: var(--color-text-secondary);
 }
 
 .notes-fab-trigger:hover {
-    background-color: var(--color-primary-hover);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-secondary);
+    border-color: var(--color-border-secondary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     transform: scale(1.05);
 }
 
@@ -1292,7 +1302,8 @@ main.main-content > .container {
 }
 
 .notes-fab-container.open .notes-fab-trigger {
-    background-color: var(--color-text-secondary);
+    background-color: var(--color-bg-secondary);
+    border-color: var(--color-border-secondary);
 }
 
 .notes-fab-menu {
@@ -1318,11 +1329,10 @@ main.main-content > .container {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    padding-right: 1.25rem;
+    padding: 0.5rem 1rem;
     background-color: var(--color-bg-primary);
     border: 1px solid var(--color-border);
-    border-radius: 28px;
+    border-radius: var(--radius-md);
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     transition:
@@ -1331,22 +1341,23 @@ main.main-content > .container {
         box-shadow 0.15s ease;
     white-space: nowrap;
     font-family: inherit;
-    color: var(--color-text-primary);
+    color: var(--color-text-secondary);
 }
 
 .notes-fab-action:hover {
+    color: var(--color-text-primary);
     background-color: var(--color-bg-secondary);
-    transform: translateX(-4px);
+    border-color: var(--color-border-secondary);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .notes-fab-action:active {
-    transform: translateX(-2px) scale(0.98);
+    transform: scale(0.98);
 }
 
 .notes-fab-action svg {
     flex-shrink: 0;
-    color: var(--color-primary);
+    color: inherit;
 }
 
 .fab-action-label {

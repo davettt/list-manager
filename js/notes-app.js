@@ -87,6 +87,8 @@ const NotesApp = (() => {
         // eslint-disable-next-line no-undef
         NotesEditor.initialize();
         await loadNotes();
+        // Position sidebar toggle button (after layout is ready)
+        requestAnimationFrame(positionSidebarToggle);
     }
 
     /**
@@ -115,6 +117,7 @@ const NotesApp = (() => {
         const notesView = elements.notesView();
         const listsFooter = document.getElementById('lists-footer-actions');
         const notesFab = document.getElementById('notes-fab');
+        const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
 
         if (listsTabBtn && notesTabBtn && listsView && notesView) {
             listsTabBtn.addEventListener('click', () => {
@@ -125,9 +128,12 @@ const NotesApp = (() => {
                 if (listsFooter) {
                     listsFooter.style.display = 'flex';
                 }
-                // Hide FAB on lists page
+                // Hide FAB and sidebar toggle on lists page
                 if (notesFab) {
                     notesFab.style.display = 'none';
+                }
+                if (sidebarToggleBtn) {
+                    sidebarToggleBtn.style.display = 'none';
                 }
                 // Remove notes-active class from main-content
                 const mainContent = document.querySelector('main > .main-content');
@@ -146,9 +152,14 @@ const NotesApp = (() => {
                 if (listsFooter) {
                     listsFooter.style.display = 'none';
                 }
-                // Show FAB on notes page
+                // Show FAB and sidebar toggle on notes page
                 if (notesFab) {
                     notesFab.style.display = 'flex';
+                }
+                if (sidebarToggleBtn) {
+                    sidebarToggleBtn.style.display = 'flex';
+                    // Position toggle button after display change
+                    requestAnimationFrame(positionSidebarToggle);
                 }
                 // Add class to main-content to remove padding
                 const mainContent = document.querySelector('main > .main-content');
@@ -156,6 +167,9 @@ const NotesApp = (() => {
                     mainContent.classList.add('notes-active');
                 }
             });
+
+            // Reposition toggle button on window resize
+            window.addEventListener('resize', positionSidebarToggle);
         }
     }
 
@@ -342,12 +356,47 @@ const NotesApp = (() => {
     }
 
     /**
+     * Position the sidebar toggle button relative to the sidebar
+     */
+    function positionSidebarToggle() {
+        const notesView = document.getElementById('notes-view');
+        const toggleBtn = document.getElementById('sidebar-toggle-btn');
+        const fabContainer = document.getElementById('notes-fab');
+        if (!notesView || !toggleBtn) {
+            return;
+        }
+
+        // Only position if notes view is visible
+        if (notesView.style.display === 'none') {
+            return;
+        }
+
+        // Get the container inside notes-view (this is the positioned parent of the sidebar)
+        const container = notesView.querySelector('.container');
+        if (!container) {
+            return;
+        }
+
+        const containerRect = container.getBoundingClientRect();
+        // If container has no width, it's not laid out yet - retry
+        if (containerRect.width === 0) {
+            setTimeout(positionSidebarToggle, 50);
+            return;
+        }
+
+        // Position buttons at the left edge of the container (CSS margin-left offsets further)
+        toggleBtn.style.left = `${containerRect.left}px`;
+        if (fabContainer) {
+            fabContainer.style.left = `${containerRect.left}px`;
+        }
+    }
+
+    /**
      * Initialize FAB (Floating Action Button)
      */
     function initializeFAB() {
         const fabContainer = document.getElementById('notes-fab');
         const fabTrigger = document.getElementById('notes-fab-trigger');
-        const fabToggleSidebar = document.getElementById('fab-toggle-sidebar');
         const fabNewNote = document.getElementById('fab-new-note');
         const fabImport = document.getElementById('fab-import');
         const fabExport = document.getElementById('fab-export');
@@ -368,14 +417,6 @@ const NotesApp = (() => {
                 fabContainer.classList.remove('open');
             }
         });
-
-        // FAB action: Toggle Sidebar
-        if (fabToggleSidebar) {
-            fabToggleSidebar.addEventListener('click', () => {
-                toggleSidebar();
-                fabContainer.classList.remove('open');
-            });
-        }
 
         // FAB action: New Note
         if (fabNewNote) {
@@ -414,6 +455,43 @@ const NotesApp = (() => {
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape' && fabContainer.classList.contains('open')) {
                 fabContainer.classList.remove('open');
+            }
+        });
+
+        // Sidebar toggle button (always visible)
+        const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+        if (sidebarToggleBtn) {
+            sidebarToggleBtn.addEventListener('click', toggleSidebar);
+        }
+
+        // Keyboard shortcuts (only when Notes tab is active)
+        document.addEventListener('keydown', e => {
+            // Only handle shortcuts when Notes view is visible
+            const notesPage = document.getElementById('notes-page');
+            if (!notesPage || notesPage.style.display === 'none') {
+                return;
+            }
+
+            // Don't trigger if user is typing in an input/textarea
+            const activeEl = document.activeElement;
+            const isTyping =
+                activeEl.tagName === 'INPUT' ||
+                activeEl.tagName === 'TEXTAREA' ||
+                activeEl.isContentEditable;
+
+            // Cmd/Ctrl + B: Toggle sidebar
+            if ((e.metaKey || e.ctrlKey) && e.key === 'b' && !e.shiftKey) {
+                e.preventDefault();
+                toggleSidebar();
+            }
+
+            // Cmd/Ctrl + N: New note (only if not typing)
+            if ((e.metaKey || e.ctrlKey) && e.key === 'n' && !e.shiftKey && !isTyping) {
+                e.preventDefault();
+                const newNoteBtn = document.getElementById('new-note-btn');
+                if (newNoteBtn) {
+                    newNoteBtn.click();
+                }
             }
         });
     }
@@ -545,15 +623,32 @@ const NotesApp = (() => {
         const categoryId = `category-${categoryPath.replace(/\//g, '-')}`;
         const indentClass = depth > 0 ? `depth-${depth}` : '';
 
+        // Only show add button on root categories (depth 0) - max 2 levels allowed
+        const addButton =
+            depth < 1
+                ? `<button class="category-add-btn" data-parent="${categoryPath}" title="Add subcategory">+</button>`
+                : '';
+
         let html = `
         <div class="category-group ${indentClass}" data-category="${categoryPath}" data-depth="${depth}">
             <button class="category-header expanded" data-category="${categoryPath}" id="${categoryId}">
                 <span class="disclosure-icon">▼</span>
                 <span>${categoryName}</span>
                 <span class="category-count">${totalNotes}</span>
-                <button class="category-add-btn" data-parent="${categoryPath}" title="Add subcategory">+</button>
+                ${addButton}
             </button>
-            <div class="category-content expanded">
+            <div class="category-content expanded">`;
+
+        // Render children (subcategories) FIRST - only if depth < 1 (max 2 levels)
+        if (hasChildren && depth < 1) {
+            const childKeys = Object.keys(node.children).sort((a, b) => a.localeCompare(b));
+            childKeys.forEach(childKey => {
+                html += renderCategoryNode(childKey, node.children[childKey], depth + 1);
+            });
+        }
+
+        // Render notes AFTER subcategories
+        html += `
                 <ul class="category-notes">
                     ${node._notes
                         .map(
@@ -570,17 +665,7 @@ const NotesApp = (() => {
                     `
                         )
                         .join('')}
-                </ul>`;
-
-        // Render children (subcategories) - only if depth < 1 (max 2 levels)
-        if (hasChildren && depth < 1) {
-            const childKeys = Object.keys(node.children).sort((a, b) => a.localeCompare(b));
-            childKeys.forEach(childKey => {
-                html += renderCategoryNode(childKey, node.children[childKey], depth + 1);
-            });
-        }
-
-        html += `
+                </ul>
             </div>
         </div>`;
 

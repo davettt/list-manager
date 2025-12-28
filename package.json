@@ -1,6 +1,6 @@
 {
     "name": "list-manager",
-    "version": "1.9.0",
+    "version": "1.10.0",
     "description": "Privacy-first list manager with optional AI suggestions",
     "type": "module",
     "scripts": {
