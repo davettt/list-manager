@@ -40,7 +40,7 @@ const ImportHandler = (function () {
                 if (jsonData.lists && Array.isArray(jsonData.lists)) {
                     return { type: 'json', data: jsonData };
                 }
-            } catch (e) {
+            } catch (_e) {
                 // Not JSON, treat as text
             }
         }

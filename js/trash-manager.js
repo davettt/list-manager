@@ -3,7 +3,6 @@
  * Handles trash UI, recovery, and permanent deletion
  */
 
-// eslint-disable-next-line no-unused-vars
 const TrashManager = (() => {
     const elements = {
         trashBtn: () => document.getElementById('trash-btn'),
@@ -110,14 +109,14 @@ const TrashManager = (() => {
             updateTrashCountBadge();
 
             // Show modal using UI helper
-            // eslint-disable-next-line no-undef
+
             UI.showModal('trash-modal');
 
             // Start updating countdown timers
             startCountdownUpdates();
         } catch (error) {
             console.error('Error opening trash:', error);
-            // eslint-disable-next-line no-undef
+
             UI.showToast('Failed to load trash', 'error');
         }
     }
@@ -126,7 +125,6 @@ const TrashManager = (() => {
      * Close trash modal
      */
     function closeTrash() {
-        // eslint-disable-next-line no-undef
         UI.hideModal('trash-modal');
 
         // Stop countdown updates
@@ -251,7 +249,6 @@ const TrashManager = (() => {
         try {
             const item = state.trashItems.find(i => i.id === id && i.type === type);
             if (!item) {
-                // eslint-disable-next-line no-undef
                 UI.showToast('Item not found in trash', 'error');
                 return;
             }
@@ -283,7 +280,6 @@ const TrashManager = (() => {
             // Update count badge immediately
             await updateTrashCountBadge();
 
-            // eslint-disable-next-line no-undef
             UI.showToast(
                 `${type.charAt(0).toUpperCase() + type.slice(1)} restored successfully`,
                 'success'
@@ -295,7 +291,7 @@ const TrashManager = (() => {
             }, 800);
         } catch (error) {
             console.error('Error restoring item:', error);
-            // eslint-disable-next-line no-undef
+
             UI.showToast('Failed to restore item', 'error');
         }
     }
@@ -307,7 +303,6 @@ const TrashManager = (() => {
         try {
             const item = state.trashItems.find(i => i.id === id && i.type === type);
             if (!item) {
-                // eslint-disable-next-line no-undef
                 UI.showToast('Item not found in trash', 'error');
                 return;
             }
@@ -344,14 +339,13 @@ const TrashManager = (() => {
             // Update count badge immediately
             await updateTrashCountBadge();
 
-            // eslint-disable-next-line no-undef
             UI.showToast(
                 `${type.charAt(0).toUpperCase() + type.slice(1)} permanently deleted`,
                 'success'
             );
         } catch (error) {
             console.error('Error permanently deleting item:', error);
-            // eslint-disable-next-line no-undef
+
             UI.showToast('Failed to permanently delete item', 'error');
         }
     }

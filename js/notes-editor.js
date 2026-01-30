@@ -114,13 +114,12 @@ const NotesEditor = (() => {
             }
 
             // Use marked to render markdown
-            // eslint-disable-next-line no-undef
+
             if (typeof marked === 'undefined') {
                 preview.innerHTML = '<p style="color: #999;">Markdown library not loaded</p>';
                 return;
             }
 
-            // eslint-disable-next-line no-undef
             if (typeof DOMPurify === 'undefined') {
                 preview.innerHTML = '<p style="color: #999;">Security library not loaded</p>';
                 return;

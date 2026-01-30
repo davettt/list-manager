@@ -5,13 +5,12 @@
 
 /* global ImportHandler, NotesStorage */
 
-// eslint-disable-next-line no-unused-vars
 const NotesApp = (() => {
     // Note categories - loaded from API, default fallback
     let NOTE_CATEGORIES = ['personal', 'travel', 'health', 'work', 'projects', 'ideas', 'other'];
 
     let allNotes = [];
-    // eslint-disable-next-line no-unused-vars
+
     let filteredNotes = [];
     let filterCategory = '';
     let filterFavoritesOnly = false;
@@ -96,7 +95,6 @@ const NotesApp = (() => {
      */
     async function loadCategoriesFromAPI() {
         try {
-            // eslint-disable-next-line no-undef
             const categories = await Storage.getCategories();
             if (categories && categories.length > 0) {
                 NOTE_CATEGORIES = categories;
@@ -515,7 +513,6 @@ const NotesApp = (() => {
      */
     async function loadNotes() {
         try {
-            // eslint-disable-next-line no-undef
             allNotes = await NotesStorage.getAllNotes();
             filteredNotes = [...allNotes];
             renderNotesList();
@@ -853,7 +850,7 @@ const NotesApp = (() => {
                         note.category = targetCategory;
                         showToast(`Moved to ${targetCategory}`, 'success');
                         filterNotes(); // Re-render
-                    } catch (err) {
+                    } catch (_err) {
                         showToast('Failed to move note', 'error');
                     }
                 }
@@ -976,7 +973,6 @@ const NotesApp = (() => {
                 return;
             }
 
-            // eslint-disable-next-line no-undef
             const newNote = await NotesStorage.createNote(title.trim(), 'personal', []);
             allNotes.push(newNote);
             filterNotes();
@@ -1003,17 +999,16 @@ const NotesApp = (() => {
         }
 
         try {
-            // eslint-disable-next-line no-undef
             await NotesStorage.deleteNote(noteId);
             allNotes = allNotes.filter(n => n.id !== noteId);
             // eslint-disable-next-line no-undef
             NotesEditor.clearEditor();
             filterNotes();
-            // eslint-disable-next-line no-undef
+
             UI.showToast('Note deleted', 'success');
         } catch (error) {
             console.error('Error deleting note:', error);
-            // eslint-disable-next-line no-undef
+
             UI.showToast('Error deleting note', 'error');
         }
     }
@@ -1025,7 +1020,6 @@ const NotesApp = (() => {
         // eslint-disable-next-line no-undef
         const noteId = NotesEditor.getCurrentNoteId();
         if (!noteId) {
-            // eslint-disable-next-line no-undef
             UI.showToast('Please select a note first', 'error');
             return;
         }
@@ -1043,7 +1037,6 @@ const NotesApp = (() => {
         // eslint-disable-next-line no-undef
         const noteId = NotesEditor.getCurrentNoteId();
         if (!noteId) {
-            // eslint-disable-next-line no-undef
             UI.showToast('Please select a note first', 'error');
             return;
         }
@@ -1065,7 +1058,6 @@ const NotesApp = (() => {
             // Get note info for filename
             const note = allNotes.find(n => n.id === noteId);
             if (!note) {
-                // eslint-disable-next-line no-undef
                 UI.showToast('Note not found', 'error');
                 return;
             }
@@ -1097,7 +1089,7 @@ const NotesApp = (() => {
             const host = window.location.host;
 
             // Get display settings for PDF export
-            // eslint-disable-next-line no-undef
+
             const settings = await Storage.getSettings();
             const font = settings.display?.font || 'system';
             const paperSize = settings.display?.paperSize || 'a4';
@@ -1109,7 +1101,7 @@ const NotesApp = (() => {
             showCurlCommandModal(curlCommand, filename);
         } catch (error) {
             console.error('Error exporting note to PDF:', error);
-            // eslint-disable-next-line no-undef
+
             UI.showToast('Error exporting PDF: ' + error.message, 'error');
         }
     }
@@ -1169,7 +1161,6 @@ const NotesApp = (() => {
                     navigator.clipboard
                         .writeText(curlCommand)
                         .then(() => {
-                            // eslint-disable-next-line no-undef
                             UI.showToast('Curl command copied to clipboard!', 'success');
                         })
                         .catch(() => {
@@ -1178,7 +1169,7 @@ const NotesApp = (() => {
                 } else {
                     fallbackCopy();
                 }
-            } catch (err) {
+            } catch (_err) {
                 fallbackCopy();
             }
 
@@ -1192,10 +1183,9 @@ const NotesApp = (() => {
                 selection.addRange(range);
                 try {
                     document.execCommand('copy');
-                    // eslint-disable-next-line no-undef
+
                     UI.showToast('Curl command copied to clipboard!', 'success');
-                } catch (err) {
-                    // eslint-disable-next-line no-undef
+                } catch (_err) {
                     UI.showToast('Please copy the command manually', 'warning');
                 }
             }
@@ -1209,7 +1199,6 @@ const NotesApp = (() => {
             }
         });
 
-        // eslint-disable-next-line no-undef
         UI.showToast('PDF download command ready - check the modal', 'success');
     }
 

@@ -744,7 +744,7 @@
             UI.populateTagFilter(state.lists);
             renderLists();
             UI.showToast('List updated', 'success');
-        } catch (error) {
+        } catch (_error) {
             UI.showToast('Failed to update list', 'error');
         }
     }
@@ -776,7 +776,7 @@
                 state.currentList.favorite ? 'Added to favorites' : 'Removed from favorites',
                 'success'
             );
-        } catch (error) {
+        } catch (_error) {
             UI.showToast('Failed to update favorite', 'error');
         }
     }
@@ -802,7 +802,7 @@
             closeListModal();
             renderLists();
             UI.showToast('List deleted', 'success');
-        } catch (error) {
+        } catch (_error) {
             UI.showToast('Failed to delete list', 'error');
         }
     }
@@ -859,7 +859,7 @@
             renderLists();
             input.value = '';
             UI.showToast('Item added', 'success');
-        } catch (error) {
+        } catch (_error) {
             UI.showToast('Failed to add item', 'error');
         }
     }
@@ -898,7 +898,7 @@
             state.currentList = state.lists.find(l => l.id === state.currentList.id);
             renderItems(state.currentList);
             renderLists();
-        } catch (error) {
+        } catch (_error) {
             UI.showToast('Failed to update item', 'error');
             e.target.checked = !e.target.checked;
         }
@@ -938,7 +938,7 @@
                 renderItems(state.currentList);
                 renderLists();
                 UI.showToast('Item deleted', 'success');
-            } catch (error) {
+            } catch (_error) {
                 UI.showToast('Failed to delete item', 'error');
             }
         }
@@ -1074,7 +1074,7 @@
             renderLists();
             UI.hideAiPanel();
             UI.showToast(`Added ${suggestions.length} suggestion(s)`, 'success');
-        } catch (error) {
+        } catch (_error) {
             UI.showToast('Failed to add suggestions', 'error');
         }
     }
@@ -1232,7 +1232,7 @@
             const filename = `list-manager-backup-${new Date().toISOString().split('T')[0]}.json`;
             Utils.downloadJson(data, filename);
             UI.showToast('Full backup exported successfully', 'success');
-        } catch (error) {
+        } catch (_error) {
             UI.showToast('Failed to export data', 'error');
         }
     }
@@ -1254,7 +1254,7 @@
             const filename = `lists-export-${new Date().toISOString().split('T')[0]}.json`;
             Utils.downloadJson(data, filename);
             UI.showToast(`Exported ${lists.length} list(s)`, 'success');
-        } catch (error) {
+        } catch (_error) {
             UI.showToast('Failed to export lists', 'error');
         }
     }
@@ -1609,7 +1609,7 @@
             renderLists();
             UI.hideModal('settings-modal');
             UI.showToast('All data cleared. Backup saved to Downloads.', 'success');
-        } catch (error) {
+        } catch (_error) {
             UI.showToast('Failed to clear data', 'error');
         }
     }

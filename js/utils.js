@@ -197,7 +197,7 @@ const Utils = (function () {
                 try {
                     const data = JSON.parse(e.target.result);
                     resolve(data);
-                } catch (error) {
+                } catch (_error) {
                     reject(new Error('Invalid JSON file'));
                 }
             };
@@ -299,7 +299,7 @@ const Utils = (function () {
     function decodeBase64(str) {
         try {
             return atob(str);
-        } catch (e) {
+        } catch (_e) {
             return '';
         }
     }

@@ -4,7 +4,6 @@
  * Uses direct API calls to AI providers
  */
 
-// eslint-disable-next-line no-unused-vars
 const NotesAI = (() => {
     const state = {
         isAnalyzing: false
@@ -16,7 +15,6 @@ const NotesAI = (() => {
      */
     async function getAISettings() {
         try {
-            // eslint-disable-next-line no-undef
             const settings = await Storage.getSettings();
 
             if (!settings) {
@@ -24,7 +22,7 @@ const NotesAI = (() => {
             }
 
             const aiSettings = settings.ai || {};
-            // eslint-disable-next-line no-undef
+
             const apiKey = Utils.decodeBase64(aiSettings.apiKey || settings.apiKey || '');
 
             if (!apiKey || !apiKey.trim()) {
@@ -575,7 +573,7 @@ ${chunkText}`;
             textarea.value = `**Summary:** ${summary}\n\n${textarea.value}`;
             modal.remove();
             // Trigger input event to update preview
-            // eslint-disable-next-line no-undef
+
             textarea.dispatchEvent(new Event('input', { bubbles: true }));
         });
     }
@@ -713,7 +711,7 @@ ${chunkText}`;
                 } else {
                     throw new Error('Could not extract any corrections');
                 }
-            } catch (fallbackError) {
+            } catch (_fallbackError) {
                 // Last resort: just show the raw feedback
                 const sanitizedFeedback = Utils.sanitizeHtml(feedback)
                     .replace(/\\n/g, '\n')
@@ -810,7 +808,7 @@ ${chunkText}`;
             try {
                 document.execCommand('copy');
                 alert('Feedback copied to clipboard');
-            } catch (error) {
+            } catch (_error) {
                 alert('Failed to copy. Please copy the feedback manually.');
             }
             document.body.removeChild(textarea);
@@ -844,7 +842,7 @@ ${chunkText}`;
                         textarea.value = correctedText;
                         modal.remove();
                         // Trigger input event to update preview
-                        // eslint-disable-next-line no-undef
+
                         textarea.dispatchEvent(new Event('input', { bubbles: true }));
                         // Show confirmation message
                         // eslint-disable-next-line no-undef
@@ -1066,7 +1064,7 @@ ${chunkText}`;
             textarea.value = `${textarea.value}\n\n**Alternative Perspectives:**\n${opposite}`;
             modal.remove();
             // Trigger input event to update preview
-            // eslint-disable-next-line no-undef
+
             textarea.dispatchEvent(new Event('input', { bubbles: true }));
         });
     }
@@ -1190,7 +1188,7 @@ ${content}`;
                     textarea.value = improved;
                     modal.remove();
                     // Trigger input event to update preview
-                    // eslint-disable-next-line no-undef
+
                     textarea.dispatchEvent(new Event('input', { bubbles: true }));
                     // Show confirmation message
                     // eslint-disable-next-line no-undef
@@ -1256,19 +1254,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Execute the selected action
                     switch (action) {
                         case 'grammar':
-                            // eslint-disable-next-line no-undef
                             NotesAI.checkGrammar(noteId, content);
                             break;
                         case 'tldr':
-                            // eslint-disable-next-line no-undef
                             NotesAI.generateTLDR(noteId, content);
                             break;
                         case 'opposite':
-                            // eslint-disable-next-line no-undef
                             NotesAI.generateOpposite(noteId, content);
                             break;
                         case 'improve':
-                            // eslint-disable-next-line no-undef
                             NotesAI.improveWriting(noteId, content);
                             break;
                     }

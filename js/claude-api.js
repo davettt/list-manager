@@ -238,7 +238,6 @@ const ClaudeAPI = (function () {
      */
     async function getLanguageSetting() {
         try {
-            // eslint-disable-next-line no-undef
             if (typeof Storage !== 'undefined' && Storage.getSettings) {
                 const settings = await Storage.getSettings();
                 return settings?.ai?.language || 'en';
@@ -442,7 +441,7 @@ Requirements:
         try {
             // Try direct parse first
             return JSON.parse(response);
-        } catch (e) {
+        } catch (_e) {
             // Try to extract JSON from markdown code block
             const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
             if (jsonMatch) {

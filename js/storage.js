@@ -61,7 +61,7 @@ const Storage = (function () {
         try {
             const response = await fetch('/api/health');
             return response.ok;
-        } catch (e) {
+        } catch (_e) {
             return false;
         }
     }

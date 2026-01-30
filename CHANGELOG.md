@@ -14,6 +14,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.1] - 2026-01-31
+
+### Security
+- 🔒 **Fixed 4 npm audit vulnerabilities** (TC-166)
+  - **qs** (high severity) - arrayLimit bypass allowing DoS via memory exhaustion
+  - **body-parser** (high severity) - depends on vulnerable qs
+  - **express** (high severity) - depends on vulnerable body-parser and qs
+  - **eslint** (moderate severity) - stack overflow when serializing circular references
+
+### Changed
+- ⬆️ **ESLint v9 Migration** - Updated to ESLint v9 with flat config format
+  - New `eslint.config.js` replaces deprecated `.eslintrc.json`
+  - Added `@eslint/js` and `globals` packages
+
+### Fixed
+- Fixed 20 unused catch variable lint errors (renamed to `_error`, `_e`, `_err` pattern)
+- Removed 20 obsolete eslint-disable directives
+
+---
+
 ## [1.11.0] - 2025-12-28
 
 ### Added
