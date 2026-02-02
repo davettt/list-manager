@@ -16,6 +16,7 @@ const NotesApp = (() => {
     let filterFavoritesOnly = false;
     let noteSortOrder = 'alphabetical'; // 'alphabetical' or 'date'
     let categorySortOrder = 'alphabetical'; // 'alphabetical' or 'custom'
+    let currentSearchQuery = ''; // Track current search query for UI behavior
 
     // DOM elements
     const elements = {
@@ -622,6 +623,12 @@ const NotesApp = (() => {
         const totalNotes = countNotesInCategory(node);
         const hasChildren = Object.keys(node.children).length > 0;
         const isInCategories = NOTE_CATEGORIES.includes(node._path);
+        const isSearching = currentSearchQuery.length > 0;
+
+        // During search: hide categories with no matching notes
+        if (isSearching && totalNotes === 0) {
+            return '';
+        }
 
         // Skip if no notes AND not a defined category AND no children
         // (show empty categories that exist in NOTE_CATEGORIES so users can add notes to them)
@@ -640,15 +647,19 @@ const NotesApp = (() => {
                 ? `<button class="category-add-btn" data-parent="${categoryPath}" title="Add subcategory">+</button>`
                 : '';
 
+        // During search: force expand all categories with matching notes
+        const expandClass = isSearching ? 'expanded' : 'expanded';
+        const disclosureIcon = isSearching ? '▼' : '▼';
+
         let html = `
         <div class="category-group ${indentClass}" data-category="${categoryPath}" data-depth="${depth}">
-            <button class="category-header expanded" data-category="${categoryPath}" id="${categoryId}">
-                <span class="disclosure-icon">▼</span>
+            <button class="category-header ${expandClass}" data-category="${categoryPath}" id="${categoryId}">
+                <span class="disclosure-icon">${disclosureIcon}</span>
                 <span>${categoryName}</span>
                 <span class="category-count">${totalNotes}</span>
                 ${addButton}
             </button>
-            <div class="category-content expanded">`;
+            <div class="category-content ${expandClass}">`;
 
         // Render children (subcategories) FIRST - only if depth < 1 (max 2 levels)
         if (hasChildren && depth < 1) {
@@ -885,6 +896,21 @@ const NotesApp = (() => {
      * Restore category expansion state from localStorage
      */
     function restoreCategoryState() {
+        // During search: keep all categories expanded so matches are visible
+        if (currentSearchQuery.length > 0) {
+            document.querySelectorAll('.category-header').forEach(header => {
+                header.classList.add('expanded');
+                header.classList.remove('collapsed');
+                const content = header
+                    .closest('.category-group')
+                    .querySelector(':scope > .category-content');
+                if (content) {
+                    content.classList.add('expanded');
+                }
+            });
+            return;
+        }
+
         const expandedCategories = JSON.parse(localStorage.getItem('expandedCategories') || '{}');
 
         document.querySelectorAll('.category-header').forEach(header => {
@@ -914,11 +940,14 @@ const NotesApp = (() => {
      * Filter notes by search query, category, and favorites
      */
     function filterNotes(query = '') {
+        // Store current search query for UI behavior
+        currentSearchQuery = query.trim();
+
         let results = [...allNotes];
 
         // Apply search filter
-        if (query && query.trim()) {
-            const lowerQuery = query.toLowerCase();
+        if (currentSearchQuery) {
+            const lowerQuery = currentSearchQuery.toLowerCase();
             results = results.filter(
                 note =>
                     note.title.toLowerCase().includes(lowerQuery) ||
@@ -938,7 +967,7 @@ const NotesApp = (() => {
 
         filteredNotes = results;
         renderNotesList();
-        // Restore category expansion state after rendering
+        // Restore category expansion state after rendering (skips if searching)
         setTimeout(() => {
             restoreCategoryState();
         }, 0);

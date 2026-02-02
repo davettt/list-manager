@@ -14,6 +14,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.12.0] - 2026-02-02
+
+### Fixed
+- 🎨 **Sidebar Layout Improvements** - Fixed overlapping buttons and improved visual alignment in notes sidebar
+  - Added 3rem-3.5rem left padding to all sidebar content (search, categories, notes)
+  - Repositioned search icon to prevent overlap with sidebar toggle button
+  - Balanced right padding for visual symmetry
+  - Fixed nested category alignment (4rem padding for depth-1 categories)
+  - Note titles indented 3.5rem for visual hierarchy (0.5rem more than categories)
+
+### Changed
+- 🔍 **Improved Notes Search Behavior** - Search now provides better results visibility
+  - Categories with no matching notes are hidden during search
+  - Categories with matches auto-expand to show matching notes
+  - Normal collapse/expand behavior returns when search is cleared
+  - Added `currentSearchQuery` variable to track search state
+  - Modified `renderCategoryNode()` to filter empty categories when searching
+  - Updated `restoreCategoryState()` to force-expand during search
+
+---
+
 ## [1.11.1] - 2026-01-31
 
 ### Security

@@ -222,7 +222,7 @@ main.main-content > .container {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.5rem 1rem 1rem 3rem;
+    padding: 0.5rem 3rem 1rem 3rem;
     border-bottom: 1px solid var(--color-border);
     background-color: var(--color-bg-primary);
     flex-shrink: 0;
@@ -252,13 +252,13 @@ main.main-content > .container {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    padding: 0.5rem 0.5rem;
+    padding: 0.5rem 3.5rem 0.5rem 3.5rem;
 }
 
 .sidebar-search input {
     flex: 1;
     min-width: 0;
-    padding: 0.5rem 1.75rem 0.5rem 1.75rem;
+    padding: 0.5rem 1.75rem 0.5rem 2.5rem;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     font-size: 0.875rem;
@@ -278,7 +278,7 @@ main.main-content > .container {
 
 .sidebar-search .search-icon {
     position: absolute;
-    right: 0.75rem;
+    left: 4rem;
     top: 50%;
     transform: translateY(-50%);
     color: var(--color-text-muted);
@@ -288,7 +288,7 @@ main.main-content > .container {
 
 /* Sort Controls */
 .sidebar-sort-controls {
-    padding: 0.75rem 0.5rem;
+    padding: 0.75rem 3rem 0.75rem 3rem;
     border-bottom: 1px solid var(--color-border);
     background-color: var(--color-bg-primary);
     flex-shrink: 0;
@@ -369,17 +369,17 @@ main.main-content > .container {
 
 /* Nested Category Indentation */
 .category-group.depth-1 {
-    margin-left: 1rem;
+    margin-left: 0;
     border-bottom: none;
 }
 
 .category-group.depth-1 .category-header {
-    padding-left: 0.75rem;
+    padding-left: 4rem;
     font-size: 0.8rem;
 }
 
 .category-group.depth-1 .category-notes .note-item {
-    padding-left: 1.5rem;
+    padding-left: 4.5rem;
 }
 
 /* Category Content (collapsible wrapper) */
@@ -398,7 +398,7 @@ main.main-content > .container {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 3rem 0.75rem 3rem;
     background-color: var(--color-background);
     border: none;
     cursor: pointer;
@@ -454,7 +454,7 @@ main.main-content > .container {
 
 /* Add Category Container (at bottom of sidebar) */
 .add-category-container {
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 3rem 0.75rem 3rem;
     border-top: 1px solid var(--color-border);
     background-color: var(--color-bg-primary);
 }
@@ -491,7 +491,7 @@ main.main-content > .container {
 
 /* Note Item in Sidebar */
 .category-notes .note-item {
-    padding: 0.6rem 1rem 0.6rem 1.75rem;
+    padding: 0.6rem 3rem 0.6rem 3.5rem;
     cursor: pointer;
     transition: all var(--transition-fast) ease;
     display: flex;

@@ -580,12 +580,20 @@ Built with:
 
 ---
 
-**Version**: 1.9.0
-**Last Updated**: 2025-12-26
+**Version**: 1.12.0
+**Last Updated**: 2026-02-02
 
 Made with care for people who value privacy and simplicity.
 
-### What's New in v1.9.0
+### What's New in v1.12.0
+
+**Improved Notes Search** - Search now hides empty categories and auto-expands categories with matching notes. Much easier to find what you're looking for when searching through many notes across multiple categories.
+
+**Better Sidebar Layout** - Fixed overlapping buttons and improved visual alignment. All sidebar content now has proper padding so the sidebar toggle and FAB buttons don't overlap content. Category headers and note titles are now consistently aligned with better spacing.
+
+---
+
+### What Was New in v1.9.0
 
 **Subcategories for Notes** - Organize notes with hierarchical categories (up to 2 levels deep). Create subcategories like "Work/Projects" by clicking the "+" button that appears when hovering over a category.
 
