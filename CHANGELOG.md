@@ -14,6 +14,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.12.1] - 2026-02-07
+
+### Fixed
+- 📄 **PDF Export Sizing** - Optimised PDF output for A4 paper to fit more content per page
+  - Added explicit `font-size: 11pt` for print-appropriate body text
+  - Reduced `line-height` from 1.6 to 1.4 (screen-optimised → print-optimised)
+  - Scaled down heading sizes (h1: 2em→1.5em, h2: 1.5em→1.3em, h3: 1.25em→1.15em, h4: 1.1em→1.05em)
+  - Increases usable lines per page from ~34 to ~48-50
+
+---
+
 ## [1.12.0] - 2026-02-02
 
 ### Fixed

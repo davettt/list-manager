@@ -1435,17 +1435,18 @@ async function handlePdfExport(req, res) {
                 <style>
                     body {
                         font-family: ${fontFamily};
-                        line-height: 1.6;
+                        font-size: 11pt;
+                        line-height: 1.4;
                         color: #333;
                         padding: 0;
                         margin: 0;
                         background: white;
                     }
                     h1, h2, h3, h4, h5, h6 { font-weight: bold; margin: 0.5em 0; }
-                    h1 { font-size: 2em; }
-                    h2 { font-size: 1.5em; }
-                    h3 { font-size: 1.25em; }
-                    h4 { font-size: 1.1em; }
+                    h1 { font-size: 1.5em; }
+                    h2 { font-size: 1.3em; }
+                    h3 { font-size: 1.15em; }
+                    h4 { font-size: 1.05em; }
                     p { margin: 0.5em 0; }
                     ul, ol { margin: 0.5em 0; padding-left: 2em; }
                     li { margin: 0.3em 0; }
