@@ -10,6 +10,7 @@ A simple, fast, and private tool that stores your data locally on your computer.
 - **Persistent Storage**: Data saved to filesystem for reliability (no more lost lists or notes from browser cache clears!)
 - **Flexible Lists**: Create any type of list with categories, tags, priorities, and deadlines
 - **Markdown Notes**: Write rich notes with markdown formatting, live preview, and split-pane editing
+- **Notes Browser**: Browse all notes in grid or list view, grouped by category, with drag-and-drop reorganization
 - **Smart Search**: Real-time search across lists, notes, categories, tags, and items
 - **AI Assistance** (Optional):
   - Get item suggestions for lists
@@ -337,6 +338,8 @@ In Settings → Data Management, you can clear all data. **This cannot be undone
 ## Tips & Tricks
 
 **Keyboard Shortcuts:**
+- `Cmd/Ctrl + B`: Toggle notes sidebar
+- `Cmd/Ctrl + N`: Create new note
 - Press Enter in the "Add item" field to quickly add items
 
 **Organization:**
@@ -580,12 +583,22 @@ Built with:
 
 ---
 
-**Version**: 1.12.0
-**Last Updated**: 2026-02-02
+**Version**: 1.13.0
+**Last Updated**: 2026-02-14
 
 Made with care for people who value privacy and simplicity.
 
-### What's New in v1.12.0
+### What's New in v1.13.0
+
+**Notes Browser Panel** - A dedicated notes browsing experience replaces the empty state when no note is selected. Browse all notes in grid or list view (toggle persisted), grouped by collapsible category sections with expand/collapse all controls. Click any note card to open it in the editor, and use the floating back button to return.
+
+**Note Reorganization** - Move notes between categories easily with drag-and-drop onto category headers, or use the "Move to..." modal via the three-dot menu on each card with a hierarchical category picker.
+
+**Wider Notes Sidebar** - Sidebar widened from 280px to 350px for better note name visibility, with hover tooltips showing the full note name.
+
+---
+
+### What Was New in v1.12.0
 
 **Improved Notes Search** - Search now hides empty categories and auto-expands categories with matching notes. Much easier to find what you're looking for when searching through many notes across multiple categories.
 
