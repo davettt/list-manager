@@ -367,6 +367,13 @@ const NotesEditor = (() => {
         if (restoreBtn) {
             restoreBtn.style.display = 'none';
         }
+
+        // Re-render notes browser when returning to it
+        // eslint-disable-next-line no-undef
+        if (typeof NotesApp !== 'undefined' && NotesApp.renderNotesBrowser) {
+            // eslint-disable-next-line no-undef
+            NotesApp.renderNotesBrowser();
+        }
     }
 
     /**

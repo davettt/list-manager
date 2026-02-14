@@ -17,6 +17,7 @@ const NotesApp = (() => {
     let noteSortOrder = 'alphabetical'; // 'alphabetical' or 'date'
     let categorySortOrder = 'alphabetical'; // 'alphabetical' or 'custom'
     let currentSearchQuery = ''; // Track current search query for UI behavior
+    let notesBrowserViewMode = localStorage.getItem('notesBrowserView') || 'grid';
 
     // DOM elements
     const elements = {
@@ -86,6 +87,8 @@ const NotesApp = (() => {
         updateCategorySortButtonStates();
         // eslint-disable-next-line no-undef
         NotesEditor.initialize();
+        // Notes browser setup
+        initializeNotesBrowser();
         await loadNotes();
         // Position sidebar toggle button (after layout is ready)
         requestAnimationFrame(positionSidebarToggle);
@@ -142,6 +145,11 @@ const NotesApp = (() => {
                 }
                 if (sidebarToggleBtn) {
                     sidebarToggleBtn.style.display = 'none';
+                }
+                // Hide back button
+                const backBtn = document.getElementById('note-close-btn');
+                if (backBtn) {
+                    backBtn.style.display = 'none';
                 }
                 // Remove notes-active class from main-content
                 const mainContent = document.querySelector('main.main-content');
@@ -402,6 +410,10 @@ const NotesApp = (() => {
         if (fabContainer) {
             fabContainer.style.left = `${containerRect.left}px`;
         }
+        const backBtn = document.getElementById('note-close-btn');
+        if (backBtn) {
+            backBtn.style.left = `${containerRect.left}px`;
+        }
     }
 
     /**
@@ -517,6 +529,7 @@ const NotesApp = (() => {
             allNotes = await NotesStorage.getAllNotes();
             filteredNotes = [...allNotes];
             renderNotesList();
+            renderNotesBrowser();
             // Restore category expansion state after rendering
             setTimeout(() => {
                 restoreCategoryState();
@@ -616,6 +629,455 @@ const NotesApp = (() => {
         return count;
     }
 
+    // =========================================
+    // Notes Browser Panel
+    // =========================================
+
+    /**
+     * Initialize notes browser event listeners
+     */
+    function initializeNotesBrowser() {
+        // View toggle button
+        const viewToggleBtn = document.getElementById('notes-browser-view-toggle');
+        if (viewToggleBtn) {
+            viewToggleBtn.addEventListener('click', toggleBrowserView);
+        }
+
+        // Restore saved view mode icons
+        if (notesBrowserViewMode === 'list') {
+            const gridIcon = document.getElementById('nb-grid-icon');
+            const listIcon = document.getElementById('nb-list-icon');
+            if (gridIcon) {
+                gridIcon.style.display = 'none';
+            }
+            if (listIcon) {
+                listIcon.style.display = 'block';
+            }
+        }
+
+        // Expand all / collapse all
+        const expandAllBtn = document.getElementById('notes-browser-expand-all');
+        const collapseAllBtn = document.getElementById('notes-browser-collapse-all');
+        if (expandAllBtn) {
+            expandAllBtn.addEventListener('click', () => {
+                const container = document.getElementById('notes-browser-content');
+                if (!container) {
+                    return;
+                }
+                container
+                    .querySelectorAll('.browser-category-header')
+                    .forEach(h => h.classList.remove('collapsed'));
+                container
+                    .querySelectorAll('.browser-category-notes')
+                    .forEach(n => n.classList.remove('hidden'));
+            });
+        }
+        if (collapseAllBtn) {
+            collapseAllBtn.addEventListener('click', () => {
+                const container = document.getElementById('notes-browser-content');
+                if (!container) {
+                    return;
+                }
+                container
+                    .querySelectorAll('.browser-category-header')
+                    .forEach(h => h.classList.add('collapsed'));
+                container
+                    .querySelectorAll('.browser-category-notes')
+                    .forEach(n => n.classList.add('hidden'));
+            });
+        }
+
+        // Close/back button on editor
+        const closeBtn = document.getElementById('note-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                // eslint-disable-next-line no-undef
+                NotesEditor.saveNote();
+                // eslint-disable-next-line no-undef
+                NotesEditor.clearEditor();
+                // Deselect in sidebar
+                document
+                    .querySelectorAll('.note-item')
+                    .forEach(item => item.classList.remove('active'));
+                // Hide back button
+                closeBtn.style.display = 'none';
+            });
+        }
+    }
+
+    /**
+     * Render the notes browser panel (replaces empty state)
+     */
+    function renderNotesBrowser() {
+        const container = document.getElementById('notes-browser-content');
+        if (!container) {
+            return;
+        }
+
+        const tree = buildCategoryTree(filteredNotes, NOTE_CATEGORIES);
+        let html = '';
+
+        const sortedKeys = Object.keys(tree).sort((a, b) => a.localeCompare(b));
+        sortedKeys.forEach(key => {
+            html += renderBrowserCategoryNode(key, tree[key], 0);
+        });
+
+        if (filteredNotes.length === 0) {
+            html = `<div class="notes-browser-empty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                <p>No notes found</p>
+            </div>`;
+        }
+
+        container.innerHTML = html;
+
+        // Apply current view mode class
+        container.className = `notes-browser-content notes-browser-${notesBrowserViewMode}`;
+
+        setupBrowserCardListeners();
+        setupBrowserDragAndDrop();
+    }
+
+    /**
+     * Render a browser category section with note cards
+     */
+    function renderBrowserCategoryNode(name, node, depth) {
+        const totalNotes = countNotesInCategory(node);
+        if (totalNotes === 0) {
+            return '';
+        }
+
+        const categoryName = name.charAt(0).toUpperCase() + name.slice(1);
+        const depthClass = depth > 0 ? 'browser-subcategory' : '';
+
+        let html = `
+        <div class="browser-category-section ${depthClass}" data-category="${node._path}">
+            <div class="browser-category-header" data-category="${node._path}">
+                <span class="disclosure-icon">&#9660;</span>
+                <span class="category-name">${Utils.sanitizeHtml(categoryName)}</span>
+                <span class="category-count">(${totalNotes})</span>
+            </div>
+            <div class="browser-category-notes">`;
+
+        // Render note cards
+        node._notes.forEach(note => {
+            const dateStr = formatDate(note.metadata.modified);
+            html += `
+            <div class="note-browser-card" data-note-id="${note.id}" draggable="true">
+                <div class="note-browser-card-header">
+                    <h3 class="note-browser-card-title">${Utils.sanitizeHtml(note.title)}</h3>
+                    <div class="note-browser-card-actions">
+                        ${note.favorite ? '<span class="note-browser-card-favorite">&#9733;</span>' : ''}
+                        <button class="note-move-menu-btn" data-note-id="${note.id}" title="Move to category">&#8942;</button>
+                    </div>
+                </div>
+                <div class="note-browser-card-footer">
+                    <span>${dateStr}</span>
+                </div>
+            </div>`;
+        });
+
+        // Render subcategories
+        if (depth < 1) {
+            Object.keys(node.children)
+                .sort()
+                .forEach(childKey => {
+                    html += renderBrowserCategoryNode(childKey, node.children[childKey], depth + 1);
+                });
+        }
+
+        html += `</div></div>`;
+        return html;
+    }
+
+    /**
+     * Set up click listeners for browser cards
+     */
+    function setupBrowserCardListeners() {
+        const container = document.getElementById('notes-browser-content');
+        if (!container) {
+            return;
+        }
+
+        // Click on card to open note
+        container.querySelectorAll('.note-browser-card').forEach(card => {
+            card.addEventListener('click', e => {
+                if (
+                    e.target.closest('.note-move-menu-btn') ||
+                    e.target.closest('.note-move-menu')
+                ) {
+                    return;
+                }
+                const noteId = card.dataset.noteId;
+                selectNote(noteId);
+            });
+        });
+
+        // Category header collapse/expand
+        container.querySelectorAll('.browser-category-header').forEach(header => {
+            header.addEventListener('click', () => {
+                header.classList.toggle('collapsed');
+                const notesContainer = header.nextElementSibling;
+                if (notesContainer) {
+                    notesContainer.classList.toggle('hidden');
+                }
+            });
+        });
+
+        // Move menu button — opens modal
+        container.querySelectorAll('.note-move-menu-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                const noteId = btn.dataset.noteId;
+                const note = allNotes.find(n => n.id === noteId);
+                if (!note) {
+                    return;
+                }
+                showMoveNoteModal(note);
+            });
+        });
+    }
+
+    /**
+     * Set up drag and drop for browser cards
+     */
+    function setupBrowserDragAndDrop() {
+        const container = document.getElementById('notes-browser-content');
+        if (!container) {
+            return;
+        }
+
+        let draggedNoteId = null;
+
+        container.querySelectorAll('.note-browser-card').forEach(card => {
+            card.addEventListener('dragstart', e => {
+                draggedNoteId = card.dataset.noteId;
+                card.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', card.dataset.noteId);
+            });
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+                container
+                    .querySelectorAll('.drop-target')
+                    .forEach(el => el.classList.remove('drop-target'));
+            });
+        });
+
+        container.querySelectorAll('.browser-category-header').forEach(header => {
+            header.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                header.classList.add('drop-target');
+            });
+            header.addEventListener('dragleave', () => {
+                header.classList.remove('drop-target');
+            });
+            header.addEventListener('drop', async e => {
+                e.preventDefault();
+                header.classList.remove('drop-target');
+                const noteId = draggedNoteId || e.dataTransfer.getData('text/plain');
+                if (!noteId) {
+                    return;
+                }
+                const targetCategory = header.dataset.category;
+                draggedNoteId = null;
+                await moveNoteToCategory(noteId, targetCategory);
+            });
+        });
+    }
+
+    /**
+     * Move a note to a different category
+     */
+    async function moveNoteToCategory(noteId, targetCategory) {
+        const note = allNotes.find(n => n.id === noteId);
+        if (!note || note.category === targetCategory) {
+            return;
+        }
+
+        try {
+            await NotesStorage.updateNote(noteId, { category: targetCategory });
+            note.category = targetCategory;
+            showToast(`Moved to ${targetCategory}`, 'success');
+            filterNotes(currentSearchQuery);
+        } catch (err) {
+            console.error('Error moving note:', err);
+            showToast('Failed to move note', 'error');
+        }
+    }
+
+    /**
+     * Show modal to move a note to a different category
+     */
+    function showMoveNoteModal(note) {
+        // Reuse existing modal element or create it
+        let modal = document.getElementById('note-move-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'note-move-modal';
+            modal.className = 'modal';
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            // Insert next to the other modals (after main, as sibling)
+            const settingsModal = document.getElementById('settings-modal');
+            if (settingsModal) {
+                settingsModal.parentNode.insertBefore(modal, settingsModal);
+            } else {
+                document.body.appendChild(modal);
+            }
+        }
+
+        // Build hierarchical category tree
+        const parentMap = {};
+        const sorted = [...NOTE_CATEGORIES].sort((a, b) => a.localeCompare(b));
+        sorted.forEach(cat => {
+            const parts = cat.split('/');
+            if (parts.length === 1) {
+                if (!parentMap[cat]) {
+                    parentMap[cat] = [];
+                }
+            } else {
+                const parent = parts[0];
+                if (!parentMap[parent]) {
+                    parentMap[parent] = [];
+                }
+                parentMap[parent].push(cat);
+            }
+        });
+
+        let categoryItems = '';
+        Object.keys(parentMap)
+            .sort((a, b) => a.localeCompare(b))
+            .forEach(parent => {
+                const isCurrent = parent === note.category;
+                const children = parentMap[parent];
+                const hasChildren = children.length > 0;
+                categoryItems += `<div class="note-move-modal-item ${isCurrent ? 'current' : ''} ${hasChildren ? 'has-children' : ''}" data-category="${parent}">
+                <span class="move-modal-indicator">${isCurrent ? '&#10003;' : hasChildren ? '<span class="move-modal-caret">&#9654;</span>' : ''}</span>
+                ${Utils.sanitizeHtml(parent)}
+            </div>`;
+                if (hasChildren) {
+                    categoryItems += `<div class="move-modal-children" data-parent="${parent}" style="display:none;">`;
+                    children
+                        .sort((a, b) => a.localeCompare(b))
+                        .forEach(child => {
+                            const childCurrent = child === note.category;
+                            const childName = child.split('/').pop();
+                            categoryItems += `<div class="note-move-modal-item note-move-modal-child ${childCurrent ? 'current' : ''}" data-category="${child}">
+                        <span class="move-modal-indicator">${childCurrent ? '&#10003;' : ''}</span>
+                        ${Utils.sanitizeHtml(childName)}
+                    </div>`;
+                        });
+                    categoryItems += `</div>`;
+                }
+            });
+
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:360px;">
+                <div class="modal-header">
+                    <h2>Move "${Utils.sanitizeHtml(note.title)}"</h2>
+                    <button class="icon-btn note-move-modal-close" aria-label="Close">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding:0;">
+                    ${categoryItems}
+                </div>
+            </div>`;
+
+        modal.classList.add('active');
+
+        // Close on overlay click or close button
+        modal.addEventListener('click', function handler(e) {
+            if (e.target === modal || e.target.closest('.note-move-modal-close')) {
+                modal.classList.remove('active');
+                modal.removeEventListener('click', handler);
+            }
+        });
+
+        // Parent category click — toggle children or move
+        modal
+            .querySelectorAll('.note-move-modal-item:not(.note-move-modal-child)')
+            .forEach(item => {
+                item.addEventListener('click', async () => {
+                    if (item.classList.contains('current')) {
+                        return;
+                    }
+                    const cat = item.dataset.category;
+                    const childContainer = modal.querySelector(
+                        `.move-modal-children[data-parent="${cat}"]`
+                    );
+                    if (childContainer) {
+                        // Toggle expand/collapse
+                        const isHidden = childContainer.style.display === 'none';
+                        childContainer.style.display = isHidden ? 'block' : 'none';
+                        const caret = item.querySelector('.move-modal-caret');
+                        if (caret) {
+                            caret.classList.toggle('expanded', isHidden);
+                        }
+                    } else {
+                        // No children — move directly
+                        modal.classList.remove('active');
+                        await moveNoteToCategory(note.id, cat);
+                    }
+                });
+            });
+
+        // Child category click — move directly
+        modal.querySelectorAll('.note-move-modal-child').forEach(item => {
+            item.addEventListener('click', async () => {
+                if (item.classList.contains('current')) {
+                    return;
+                }
+                modal.classList.remove('active');
+                await moveNoteToCategory(note.id, item.dataset.category);
+            });
+        });
+    }
+
+    /**
+     * Toggle browser view between grid and list
+     */
+    function toggleBrowserView() {
+        const container = document.getElementById('notes-browser-content');
+        const gridIcon = document.getElementById('nb-grid-icon');
+        const listIcon = document.getElementById('nb-list-icon');
+        if (!container) {
+            return;
+        }
+
+        if (notesBrowserViewMode === 'grid') {
+            notesBrowserViewMode = 'list';
+            container.classList.remove('notes-browser-grid');
+            container.classList.add('notes-browser-list');
+            if (gridIcon) {
+                gridIcon.style.display = 'none';
+            }
+            if (listIcon) {
+                listIcon.style.display = 'block';
+            }
+        } else {
+            notesBrowserViewMode = 'grid';
+            container.classList.remove('notes-browser-list');
+            container.classList.add('notes-browser-grid');
+            if (gridIcon) {
+                gridIcon.style.display = 'block';
+            }
+            if (listIcon) {
+                listIcon.style.display = 'none';
+            }
+        }
+
+        localStorage.setItem('notesBrowserView', notesBrowserViewMode);
+    }
+
     /**
      * Render a category tree node recursively
      */
@@ -677,7 +1139,7 @@ const NotesApp = (() => {
                             note => `
                     <li class="note-item" data-note-id="${note.id}" draggable="true">
                         <div class="note-item-content">
-                            <div class="note-item-title">${Utils.sanitizeHtml(note.title)}</div>
+                            <div class="note-item-title" title="${Utils.sanitizeHtml(note.title)}">${Utils.sanitizeHtml(note.title)}</div>
                         </div>
                         <div class="note-item-meta">
                             <span class="note-item-date">${formatDate(note.metadata.modified)}</span>
@@ -967,6 +1429,7 @@ const NotesApp = (() => {
 
         filteredNotes = results;
         renderNotesList();
+        renderNotesBrowser();
         // Restore category expansion state after rendering (skips if searching)
         setTimeout(() => {
             restoreCategoryState();
@@ -987,6 +1450,12 @@ const NotesApp = (() => {
         }
         // eslint-disable-next-line no-undef
         await NotesEditor.loadNote(noteId);
+
+        // Show back button
+        const backBtn = document.getElementById('note-close-btn');
+        if (backBtn) {
+            backBtn.style.display = 'flex';
+        }
 
         // Auto-close sidebar when note is selected
         closeSidebar();
@@ -1235,7 +1704,13 @@ const NotesApp = (() => {
      * Helper: Format date
      */
     function formatDate(dateString) {
+        if (!dateString) {
+            return '';
+        }
         const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+            return '';
+        }
         const today = new Date();
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
@@ -1476,6 +1951,7 @@ const NotesApp = (() => {
         populateCategoryDropdown,
         updateNoteInList,
         refreshCategories,
+        renderNotesBrowser,
         NOTE_CATEGORIES
     };
 })();

@@ -14,6 +14,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.13.0] - 2026-02-14
+
+### Added
+- 📋 **Notes Browser Panel** - Dedicated notes browsing experience replaces the empty state when no note is selected
+  - Grid and list view toggle (persisted preference), consistent with the lists tab
+  - Notes grouped by collapsible category sections with expand/collapse all controls
+  - Click any note card to open it in the editor
+  - Floating back button to return from editor to the browser
+- 🔀 **Note Reorganization** - Move notes between categories easily
+  - Drag and drop note cards onto category headers
+  - "Move to..." modal via three-dot menu on each card with hierarchical category picker
+- 📏 **Wider Notes Sidebar** - Sidebar widened from 280px to 350px for better note name visibility
+  - Removed 200px max-width cap on note titles
+  - Added hover tooltip showing full note name
+
+### Changed
+- 🎨 **UI Spacing Improvements** - Better vertical alignment of floating buttons, browser header, and note editor title with consistent spacing below the app header
+- 📅 **Date Formatting** - Gracefully handles missing or invalid dates instead of showing "Invalid Date"
+
+---
+
 ## [1.12.1] - 2026-02-07
 
 ### Fixed
