@@ -583,12 +583,22 @@ Built with:
 
 ---
 
-**Version**: 1.13.0
-**Last Updated**: 2026-02-14
+**Version**: 1.14.0
+**Last Updated**: 2026-02-18
 
 Made with care for people who value privacy and simplicity.
 
-### What's New in v1.13.0
+### What's New in v1.14.0
+
+**Open Note in New Window** - Open any note in a separate browser popup for side-by-side reference. Useful when referencing agenda or slide notes while writing live meeting notes. Available from the editor toolbar, each note card in the browser, and sidebar note items. Re-clicking focuses the existing popup rather than duplicating it.
+
+**Category Improvements** - Mark categories as favorites to pin them at the top of the sidebar. Rename existing categories directly from the sidebar.
+
+**Sidebar Improvements** - Collapse-all button in the sidebar header to quickly collapse all categories. Floating panel appearance with box-shadow instead of a flat border. Sort controls moved from sidebar into the notes browser header for better discoverability.
+
+---
+
+### What Was New in v1.13.0
 
 **Notes Browser Panel** - A dedicated notes browsing experience replaces the empty state when no note is selected. Browse all notes in grid or list view (toggle persisted), grouped by collapsible category sections with expand/collapse all controls. Click any note card to open it in the editor, and use the floating back button to return.
 

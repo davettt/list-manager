@@ -14,10 +14,10 @@ const NotesApp = (() => {
     let filteredNotes = [];
     let filterCategory = '';
     let filterFavoritesOnly = false;
-    let noteSortOrder = 'alphabetical'; // 'alphabetical' or 'date'
-    let categorySortOrder = 'alphabetical'; // 'alphabetical' or 'custom'
+    let noteSortOrder = localStorage.getItem('noteSortOrder') || 'alphabetical'; // 'alphabetical' or 'date'
     let currentSearchQuery = ''; // Track current search query for UI behavior
     let notesBrowserViewMode = localStorage.getItem('notesBrowserView') || 'grid';
+    let favoriteCategories = [];
 
     // DOM elements
     const elements = {
@@ -45,16 +45,32 @@ const NotesApp = (() => {
         // Clear existing options
         select.innerHTML = '';
 
-        // Sort categories for proper hierarchy display
-        const sortedCategories = [...NOTE_CATEGORIES].sort();
+        // Sort categories: favorites first, archive last, alphabetical otherwise
+        const sortedCategories = [...NOTE_CATEGORIES].sort(categorySort);
+
+        // Track which parent categories have been rendered as headers
+        const renderedParents = new Set();
 
         // Add categories as options
         sortedCategories.forEach(category => {
+            const parts = category.split('/');
+            if (parts.length > 1) {
+                const parentName = parts[0];
+                // Insert a disabled parent label if the parent isn't a standalone category
+                if (!renderedParents.has(parentName) && !NOTE_CATEGORIES.includes(parentName)) {
+                    const parentOption = document.createElement('option');
+                    parentOption.disabled = true;
+                    parentOption.textContent =
+                        parentName.charAt(0).toUpperCase() + parentName.slice(1);
+                    select.appendChild(parentOption);
+                    renderedParents.add(parentName);
+                }
+            }
+
             const option = document.createElement('option');
             option.value = category;
 
             // Format display text with visual hierarchy
-            const parts = category.split('/');
             if (parts.length > 1) {
                 // Subcategory: add indent and format nicely
                 const indent = '\u00A0\u00A0\u00A0\u00A0'; // Non-breaking spaces for indent
@@ -64,6 +80,7 @@ const NotesApp = (() => {
             } else {
                 // Root category
                 option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+                renderedParents.add(category);
             }
             select.appendChild(option);
         });
@@ -73,8 +90,9 @@ const NotesApp = (() => {
      * Initialize the notes app
      */
     async function initialize() {
-        // Load categories from API first
+        // Load categories and favorite categories from API
         await loadCategoriesFromAPI();
+        await loadFavoriteCategories();
         setupTabSwitching();
         setupEventListeners();
         populateCategoryDropdown();
@@ -82,9 +100,8 @@ const NotesApp = (() => {
         restoreSidebarState();
         // Initialize FAB
         initializeFAB();
-        // Set initial button states
-        updateSortButtonStates();
-        updateCategorySortButtonStates();
+        // Set initial sort toggle state
+        updateSortToggleBtn();
         // eslint-disable-next-line no-undef
         NotesEditor.initialize();
         // Notes browser setup
@@ -107,6 +124,57 @@ const NotesApp = (() => {
             console.error('Error loading categories:', error);
             // Use default categories if loading fails
         }
+    }
+
+    /**
+     * Load favorite categories from settings
+     */
+    async function loadFavoriteCategories() {
+        try {
+            favoriteCategories = await Storage.getFavoriteCategories();
+        } catch (error) {
+            console.error('Error loading favorite categories:', error);
+            favoriteCategories = [];
+        }
+    }
+
+    /**
+     * Toggle a category's favorite status
+     */
+    async function toggleFavoriteCategory(categoryName) {
+        const index = favoriteCategories.indexOf(categoryName);
+        if (index === -1) {
+            favoriteCategories.push(categoryName);
+        } else {
+            favoriteCategories.splice(index, 1);
+        }
+        await Storage.saveFavoriteCategories(favoriteCategories);
+        renderNotesList();
+        renderNotesBrowser();
+        populateCategoryDropdown();
+    }
+
+    /**
+     * Sort comparator for categories: favorites first, archive last, alphabetical otherwise
+     */
+    function categorySort(a, b) {
+        const rootA = a.split('/')[0];
+        const rootB = b.split('/')[0];
+        const favA = favoriteCategories.includes(rootA);
+        const favB = favoriteCategories.includes(rootB);
+        if (favA && !favB) {
+            return -1;
+        }
+        if (!favA && favB) {
+            return 1;
+        }
+        if (rootA === 'archive' && rootB !== 'archive') {
+            return 1;
+        }
+        if (rootB === 'archive' && rootA !== 'archive') {
+            return -1;
+        }
+        return a.localeCompare(b);
     }
 
     /**
@@ -225,9 +293,26 @@ const NotesApp = (() => {
             });
         }
 
+        // Collapse all sidebar categories
+        document
+            .getElementById('notes-sidebar-collapse-all')
+            ?.addEventListener('click', collapseAllSidebarCategories);
+
         const deleteBtn = elements.deleteBtn();
         if (deleteBtn) {
             deleteBtn.addEventListener('click', deleteCurrentNote);
+        }
+
+        // Open in new window button (editor toolbar)
+        const openWindowBtn = document.getElementById('note-open-window-btn');
+        if (openWindowBtn) {
+            openWindowBtn.addEventListener('click', () => {
+                // eslint-disable-next-line no-undef
+                const noteId = NotesEditor.getCurrentNoteId();
+                if (noteId) {
+                    openNoteInNewWindow(noteId);
+                }
+            });
         }
 
         // PDF export button
@@ -281,59 +366,31 @@ const NotesApp = (() => {
         document.getElementById('notes-import-btn')?.addEventListener('click', importNotes);
         document.getElementById('notes-export-btn')?.addEventListener('click', exportNotes);
 
-        // Sort buttons
-        document.getElementById('notes-sort-alpha-btn')?.addEventListener('click', () => {
-            noteSortOrder = 'alphabetical';
-            updateSortButtonStates();
-            filterNotes();
-        });
-
-        document.getElementById('notes-sort-date-btn')?.addEventListener('click', () => {
-            noteSortOrder = 'date';
-            updateSortButtonStates();
-            filterNotes();
-        });
-
-        document.getElementById('notes-sort-category-alpha-btn')?.addEventListener('click', () => {
-            categorySortOrder = 'alphabetical';
-            updateCategorySortButtonStates();
-            filterNotes();
-        });
-
-        document.getElementById('notes-sort-category-custom-btn')?.addEventListener('click', () => {
-            categorySortOrder = 'custom';
-            updateCategorySortButtonStates();
+        // Notes sort toggle in browser header
+        document.getElementById('notes-sort-toggle-btn')?.addEventListener('click', () => {
+            noteSortOrder = noteSortOrder === 'alphabetical' ? 'date' : 'alphabetical';
+            localStorage.setItem('noteSortOrder', noteSortOrder);
+            updateSortToggleBtn();
             filterNotes();
         });
     }
 
     /**
-     * Update sort button active states for notes
+     * Update the sort toggle button label to reflect current sort mode
      */
-    function updateSortButtonStates() {
-        const alphaBtn = document.getElementById('notes-sort-alpha-btn');
-        const dateBtn = document.getElementById('notes-sort-date-btn');
-
-        if (alphaBtn) {
-            alphaBtn.classList.toggle('active', noteSortOrder === 'alphabetical');
+    function updateSortToggleBtn() {
+        const btn = document.getElementById('notes-sort-toggle-btn');
+        if (!btn) {
+            return;
         }
-        if (dateBtn) {
-            dateBtn.classList.toggle('active', noteSortOrder === 'date');
-        }
-    }
-
-    /**
-     * Update sort button active states for categories
-     */
-    function updateCategorySortButtonStates() {
-        const alphaBtn = document.getElementById('notes-sort-category-alpha-btn');
-        const customBtn = document.getElementById('notes-sort-category-custom-btn');
-
-        if (alphaBtn) {
-            alphaBtn.classList.toggle('active', categorySortOrder === 'alphabetical');
-        }
-        if (customBtn) {
-            customBtn.classList.toggle('active', categorySortOrder === 'custom');
+        if (noteSortOrder === 'date') {
+            btn.textContent = 'Date';
+            btn.title = 'Sort notes alphabetically';
+            btn.classList.add('active');
+        } else {
+            btn.textContent = 'A-Z';
+            btn.title = 'Sort notes by date modified';
+            btn.classList.remove('active');
         }
     }
 
@@ -717,7 +774,7 @@ const NotesApp = (() => {
         const tree = buildCategoryTree(filteredNotes, NOTE_CATEGORIES);
         let html = '';
 
-        const sortedKeys = Object.keys(tree).sort((a, b) => a.localeCompare(b));
+        const sortedKeys = Object.keys(tree).sort(categorySort);
         sortedKeys.forEach(key => {
             html += renderBrowserCategoryNode(key, tree[key], 0);
         });
@@ -752,11 +809,13 @@ const NotesApp = (() => {
 
         const categoryName = name.charAt(0).toUpperCase() + name.slice(1);
         const depthClass = depth > 0 ? 'browser-subcategory' : '';
+        const isFavBrowser = depth === 0 && favoriteCategories.includes(name);
 
         let html = `
         <div class="browser-category-section ${depthClass}" data-category="${node._path}">
             <div class="browser-category-header" data-category="${node._path}">
                 <span class="disclosure-icon">&#9660;</span>
+                ${isFavBrowser ? '<span class="browser-category-fav">★</span>' : ''}
                 <span class="category-name">${Utils.sanitizeHtml(categoryName)}</span>
                 <span class="category-count">(${totalNotes})</span>
             </div>
@@ -771,6 +830,7 @@ const NotesApp = (() => {
                     <h3 class="note-browser-card-title">${Utils.sanitizeHtml(note.title)}</h3>
                     <div class="note-browser-card-actions">
                         ${note.favorite ? '<span class="note-browser-card-favorite">&#9733;</span>' : ''}
+                        <button class="note-open-window-btn" data-note-id="${note.id}" title="Open in new window"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg></button>
                         <button class="note-move-menu-btn" data-note-id="${note.id}" title="Move to category">&#8942;</button>
                     </div>
                 </div>
@@ -824,6 +884,14 @@ const NotesApp = (() => {
                 if (notesContainer) {
                     notesContainer.classList.toggle('hidden');
                 }
+            });
+        });
+
+        // Open in new window button on browser cards
+        container.querySelectorAll('.note-open-window-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                openNoteInNewWindow(btn.dataset.noteId);
             });
         });
 
@@ -1104,9 +1172,17 @@ const NotesApp = (() => {
         const indentClass = depth > 0 ? `depth-${depth}` : '';
 
         // Only show add button on root categories (depth 0) - max 2 levels allowed
+        // Using <span role="button"> to avoid invalid nested <button> inside <button class="category-header">
         const addButton =
             depth < 1
-                ? `<button class="category-add-btn" data-parent="${categoryPath}" title="Add subcategory">+</button>`
+                ? `<span role="button" tabindex="0" class="category-add-btn" data-parent="${categoryPath}" title="Add subcategory"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span>`
+                : '';
+
+        // Only show favorite toggle on root categories
+        const isFavorite = favoriteCategories.includes(name);
+        const favoriteButton =
+            depth < 1
+                ? `<span role="button" tabindex="0" class="category-fav-btn ${isFavorite ? 'is-favorite' : ''}" data-category="${name}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">${isFavorite ? '★' : '☆'}</span>`
                 : '';
 
         // During search: force expand all categories with matching notes
@@ -1119,6 +1195,7 @@ const NotesApp = (() => {
                 <span class="disclosure-icon">${disclosureIcon}</span>
                 <span>${categoryName}</span>
                 <span class="category-count">${totalNotes}</span>
+                ${favoriteButton}
                 ${addButton}
             </button>
             <div class="category-content ${expandClass}">`;
@@ -1141,10 +1218,10 @@ const NotesApp = (() => {
                         <div class="note-item-content">
                             <div class="note-item-title" title="${Utils.sanitizeHtml(note.title)}">${Utils.sanitizeHtml(note.title)}</div>
                         </div>
-                        <div class="note-item-meta">
-                            <span class="note-item-date">${formatDate(note.metadata.modified)}</span>
+                        <div class="note-item-actions">
+                            <button class="note-open-window-btn note-item-open-window" data-note-id="${note.id}" title="Open in new window"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg></button>
+                            ${note.favorite ? '<span class="note-item-favorite">★</span>' : ''}
                         </div>
-                        ${note.favorite ? '<span class="note-item-favorite">★</span>' : ''}
                     </li>
                     `
                         )
@@ -1175,8 +1252,8 @@ const NotesApp = (() => {
         // Build category tree
         const categoryTree = buildCategoryTree(filteredNotes, NOTE_CATEGORIES);
 
-        // Get root categories (those without "/" in their path)
-        const rootCategories = Object.keys(categoryTree).sort((a, b) => a.localeCompare(b));
+        // Get root categories - favorites first, archive last, alphabetical otherwise
+        const rootCategories = Object.keys(categoryTree).sort(categorySort);
 
         // Render categories
         let html = '';
@@ -1194,11 +1271,14 @@ const NotesApp = (() => {
 
         categoriesContainer.innerHTML = html;
 
-        // Add event listeners for category headers (click to toggle, not on add button)
+        // Add event listeners for category headers (click to toggle, not on add/fav button)
         document.querySelectorAll('.category-header').forEach(header => {
             header.addEventListener('click', e => {
-                // Don't toggle if clicking the add button
-                if (e.target.classList.contains('category-add-btn')) {
+                // Don't toggle if clicking the add or favorite button
+                if (
+                    e.target.classList.contains('category-add-btn') ||
+                    e.target.classList.contains('category-fav-btn')
+                ) {
                     e.stopPropagation();
                     return;
                 }
@@ -1206,11 +1286,31 @@ const NotesApp = (() => {
             });
         });
 
+        // Add click handlers for favorite toggle buttons
+        document.querySelectorAll('.category-fav-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                const categoryName = btn.dataset.category;
+                toggleFavoriteCategory(categoryName);
+            });
+        });
+
         // Add click handlers for note items
         categoriesContainer.querySelectorAll('.note-item').forEach(item => {
-            item.addEventListener('click', () => {
+            item.addEventListener('click', e => {
+                if (e.target.closest('.note-item-open-window')) {
+                    return;
+                }
                 const noteId = item.dataset.noteId;
                 selectNote(noteId, item);
+            });
+        });
+
+        // Open in new window from sidebar note items
+        categoriesContainer.querySelectorAll('.note-item-open-window').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                openNoteInNewWindow(btn.dataset.noteId);
             });
         });
 
@@ -1351,6 +1451,31 @@ const NotesApp = (() => {
         // Store expansion state in localStorage
         const expandedCategories = JSON.parse(localStorage.getItem('expandedCategories') || '{}');
         expandedCategories[category] = header.classList.contains('expanded');
+        localStorage.setItem('expandedCategories', JSON.stringify(expandedCategories));
+    }
+
+    /**
+     * Collapse all sidebar category sections and persist the state
+     */
+    function collapseAllSidebarCategories() {
+        const expandedCategories = JSON.parse(localStorage.getItem('expandedCategories') || '{}');
+
+        document.querySelectorAll('#notes-categories .category-header').forEach(header => {
+            const category = header.dataset.category;
+            const content = header
+                .closest('.category-group')
+                ?.querySelector(':scope > .category-content');
+
+            header.classList.remove('expanded');
+            header.classList.add('collapsed');
+            if (content) {
+                content.classList.remove('expanded');
+            }
+            if (category) {
+                expandedCategories[category] = false;
+            }
+        });
+
         localStorage.setItem('expandedCategories', JSON.stringify(expandedCategories));
     }
 
@@ -1938,6 +2063,25 @@ const NotesApp = (() => {
     }
 
     /**
+     * Open a note in a new browser window
+     * @param {string} noteId - The note ID to open
+     */
+    function openNoteInNewWindow(noteId) {
+        if (!noteId) {
+            return;
+        }
+        const url = `/note-window.html?noteId=${encodeURIComponent(noteId)}`;
+        const popup = window.open(
+            url,
+            `note_${noteId}`,
+            'width=1100,height=750,menubar=no,toolbar=no,location=no,status=no'
+        );
+        if (popup) {
+            popup.focus();
+        }
+    }
+
+    /**
      * Public API
      */
     return {
@@ -1952,7 +2096,9 @@ const NotesApp = (() => {
         updateNoteInList,
         refreshCategories,
         renderNotesBrowser,
-        NOTE_CATEGORIES
+        NOTE_CATEGORIES,
+        favoriteCategories,
+        openNoteInNewWindow
     };
 })();
 

@@ -960,6 +960,13 @@ select:focus {
     font-weight: 500;
 }
 
+.category-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.edit-category-btn,
 .delete-category-btn {
     color: var(--color-text-secondary);
     padding: var(--spacing-xs);

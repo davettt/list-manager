@@ -544,6 +544,32 @@ const Storage = (function () {
     }
 
     /**
+     * Rename a category
+     * @param {string} oldName - Current category name
+     * @param {string} newName - New category name
+     * @returns {Promise<Object>} Response with success status and updated categories
+     */
+    async function renameCategory(oldName, newName) {
+        try {
+            const response = await fetch(`/api/data/categories/${encodeURIComponent(oldName)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ newName })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to rename category');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error renaming category:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Delete a category
      * @param {string} name - Category name
      * @returns {Promise<Object>} Response with success status
@@ -565,6 +591,36 @@ const Storage = (function () {
         } catch (error) {
             console.error('Error deleting category:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Get favorite categories from settings
+     * @returns {Promise<Array>} Array of favorite category names
+     */
+    async function getFavoriteCategories() {
+        try {
+            const settings = await getSettings();
+            return settings.favoriteCategories || [];
+        } catch (error) {
+            console.error('Error getting favorite categories:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Save favorite categories to settings
+     * @param {Array} favorites - Array of favorite category names
+     * @returns {Promise<boolean>} Success status
+     */
+    async function saveFavoriteCategories(favorites) {
+        try {
+            const settings = await getSettings();
+            settings.favoriteCategories = favorites;
+            return await saveSettings(settings);
+        } catch (error) {
+            console.error('Error saving favorite categories:', error);
+            return false;
         }
     }
 
@@ -658,7 +714,10 @@ const Storage = (function () {
         getStorageInfo,
         getCategories,
         addCategory,
+        renameCategory,
         deleteCategory,
+        getFavoriteCategories,
+        saveFavoriteCategories,
         getTrash,
         restoreFromTrash,
         permanentlyDeleteFromTrash

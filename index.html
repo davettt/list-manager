@@ -191,23 +191,44 @@
                         <!-- Sidebar Header with Close Button -->
                         <div class="sidebar-header">
                             <h3>Notes</h3>
-                            <button
-                                id="notes-sidebar-close"
-                                class="icon-btn sidebar-close"
-                                aria-label="Close sidebar"
-                            >
-                                <svg
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
+                            <div class="sidebar-header-actions">
+                                <button
+                                    id="notes-sidebar-collapse-all"
+                                    class="icon-btn"
+                                    aria-label="Collapse all categories"
+                                    title="Collapse all categories"
                                 >
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                            </button>
+                                    <svg
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    >
+                                        <polyline points="18 15 12 9 6 15"></polyline>
+                                    </svg>
+                                </button>
+                                <button
+                                    id="notes-sidebar-close"
+                                    class="icon-btn sidebar-close"
+                                    aria-label="Close sidebar"
+                                >
+                                    <svg
+                                        width="20"
+                                        height="20"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Sidebar Search -->
@@ -232,64 +253,6 @@
                             </svg>
                         </div>
 
-                        <!-- Sort Controls -->
-                        <div class="sidebar-sort-controls">
-                            <div class="sort-group">
-                                <label
-                                    style="
-                                        font-size: 0.75rem;
-                                        color: var(--color-text-muted);
-                                        display: block;
-                                        margin-bottom: 0.25rem;
-                                    "
-                                    >Notes</label
-                                >
-                                <div class="button-group">
-                                    <button
-                                        id="notes-sort-alpha-btn"
-                                        class="sort-btn active"
-                                        title="Sort notes alphabetically"
-                                    >
-                                        A-Z
-                                    </button>
-                                    <button
-                                        id="notes-sort-date-btn"
-                                        class="sort-btn"
-                                        title="Sort notes by date modified"
-                                    >
-                                        Date
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="sort-group">
-                                <label
-                                    style="
-                                        font-size: 0.75rem;
-                                        color: var(--color-text-muted);
-                                        display: block;
-                                        margin-bottom: 0.25rem;
-                                    "
-                                    >Categories</label
-                                >
-                                <div class="button-group">
-                                    <button
-                                        id="notes-sort-category-alpha-btn"
-                                        class="sort-btn active"
-                                        title="Sort categories alphabetically"
-                                    >
-                                        A-Z
-                                    </button>
-                                    <button
-                                        id="notes-sort-category-custom-btn"
-                                        class="sort-btn"
-                                        title="Sort categories by custom order"
-                                    >
-                                        Custom
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Category Groups (will be rendered by JavaScript) -->
                         <div id="notes-categories" class="notes-categories">
                             <!-- Categories will be rendered here -->
@@ -309,6 +272,13 @@
                                 <div class="notes-browser-header">
                                     <h2 class="notes-browser-title">Notes</h2>
                                     <div class="notes-browser-controls">
+                                        <button
+                                            id="notes-sort-toggle-btn"
+                                            class="notes-sort-toggle"
+                                            title="Sort notes by date modified"
+                                        >
+                                            A-Z
+                                        </button>
                                         <button
                                             id="notes-browser-expand-all"
                                             class="icon-btn"
@@ -549,6 +519,27 @@
                                             <polyline points="9 16 12 13 15 16"></polyline>
                                         </svg>
                                         Export PDF
+                                    </button>
+                                    <button
+                                        id="note-open-window-btn"
+                                        class="btn btn-secondary btn-sm"
+                                        title="Open in new window"
+                                    >
+                                        <svg
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <path
+                                                d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                                            ></path>
+                                            <polyline points="15 3 21 3 21 9"></polyline>
+                                            <line x1="10" y1="14" x2="21" y2="3"></line>
+                                        </svg>
+                                        New Window
                                     </button>
                                     <button
                                         id="note-delete-btn"

@@ -181,6 +181,13 @@ main.main-content > .container {
     color: var(--color-text-muted);
 }
 
+.note-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
 .note-item-favorite {
     color: #ffc107;
     font-size: 1.2rem;
@@ -202,7 +209,7 @@ main.main-content > .container {
     display: flex;
     flex-direction: column;
     background-color: var(--color-bg-primary);
-    border-right: 1px solid var(--color-border);
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.08);
     overflow-y: auto;
     overflow-x: hidden;
     z-index: 50;
@@ -214,7 +221,7 @@ main.main-content > .container {
 
 .notes-sidebar.collapsed {
     transform: translateX(-100%);
-    border-right: none;
+    box-shadow: none;
 }
 
 /* Sidebar Header */
@@ -224,7 +231,6 @@ main.main-content > .container {
     justify-content: space-between;
     padding: 0.5rem 3rem 1rem 3rem;
     border-bottom: 1px solid var(--color-border);
-    background-color: var(--color-bg-primary);
     flex-shrink: 0;
 }
 
@@ -233,6 +239,12 @@ main.main-content > .container {
     font-size: 1rem;
     font-weight: 600;
     color: var(--color-text-primary);
+}
+
+.sidebar-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
 .sidebar-close {
@@ -248,7 +260,7 @@ main.main-content > .container {
 .sidebar-search {
     position: relative;
     border-bottom: 1px solid var(--color-border);
-    background-color: var(--color-bg-primary);
+    background-color: transparent;
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -287,64 +299,28 @@ main.main-content > .container {
 }
 
 /* Sort Controls */
-.sidebar-sort-controls {
-    padding: 0.75rem 3rem 0.75rem 3rem;
-    border-bottom: 1px solid var(--color-border);
-    background-color: var(--color-bg-primary);
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.sort-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.sort-group label {
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--color-text-muted);
-    padding: 0 0.5rem;
-}
-
-.button-group {
-    display: flex;
-    gap: 0;
+/* Notes sort toggle button in browser header */
+.notes-sort-toggle {
+    padding: 0.25rem 0.6rem;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    overflow: hidden;
-    background-color: var(--color-surface);
-}
-
-.sort-btn {
-    flex: 1;
-    padding: 0.4rem 0.6rem;
-    border: none;
     background-color: transparent;
     color: var(--color-text-secondary);
     font-size: 0.75rem;
     font-weight: 500;
     cursor: pointer;
     transition: all var(--transition-fast) ease;
-    border-right: 1px solid var(--color-border);
+    line-height: 1;
 }
 
-.sort-btn:last-child {
-    border-right: none;
+.notes-sort-toggle:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
 }
 
-.sort-btn:hover {
-    background-color: var(--color-bg-secondary);
-    color: var(--color-text-primary);
-}
-
-.sort-btn.active {
+.notes-sort-toggle.active {
     background-color: var(--color-primary);
+    border-color: var(--color-primary);
     color: white;
 }
 
@@ -354,13 +330,13 @@ main.main-content > .container {
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    background-color: var(--color-bg-primary);
+    background-color: transparent;
 }
 
 /* Category Group */
 .category-group {
     border-bottom: 1px solid var(--color-border);
-    background-color: var(--color-bg-primary);
+    background-color: transparent;
 }
 
 .category-group:last-child {
@@ -411,7 +387,7 @@ main.main-content > .container {
 }
 
 .category-header:hover {
-    background-color: var(--color-bg-secondary);
+    background-color: var(--color-bg-tertiary);
     color: var(--color-text-primary);
 }
 
@@ -432,13 +408,14 @@ main.main-content > .container {
 /* Category Add Button */
 .category-add-btn {
     margin-left: auto;
-    padding: 0.2rem 0.4rem;
+    padding: 0.2rem 0.3rem;
     border: none;
     background: transparent;
     cursor: pointer;
     color: var(--color-text-muted);
-    font-size: 0.9rem;
-    opacity: 0;
+    display: inline-flex;
+    align-items: center;
+    opacity: 0.3;
     transition:
         opacity 0.15s ease,
         color 0.15s ease;
@@ -452,11 +429,43 @@ main.main-content > .container {
     color: var(--color-primary);
 }
 
+.category-fav-btn {
+    padding: 0.1rem 0.25rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    opacity: 0;
+    transition:
+        opacity 0.15s ease,
+        color 0.15s ease;
+}
+
+.category-fav-btn.is-favorite {
+    opacity: 1;
+    color: var(--color-warning, #f59e0b);
+}
+
+.category-header:hover .category-fav-btn {
+    opacity: 1;
+}
+
+.category-fav-btn:hover {
+    color: var(--color-warning, #f59e0b);
+}
+
+.browser-category-fav {
+    color: var(--color-warning, #f59e0b);
+    font-size: 0.8rem;
+    margin-right: 0.25rem;
+}
+
 /* Add Category Container (at bottom of sidebar) */
 .add-category-container {
     padding: 0.75rem 3rem 0.75rem 3rem;
     border-top: 1px solid var(--color-border);
-    background-color: var(--color-bg-primary);
+    background-color: transparent;
 }
 
 .add-category-btn {
@@ -486,7 +495,7 @@ main.main-content > .container {
     list-style: none;
     margin: 0;
     padding: 0;
-    background-color: var(--color-bg-primary);
+    background-color: transparent;
 }
 
 /* Note Item in Sidebar */
@@ -522,6 +531,10 @@ main.main-content > .container {
 .category-notes .note-item-meta {
     font-size: 0.65rem;
     display: none;
+}
+
+.category-notes .note-item-actions {
+    gap: 0.2rem;
 }
 
 .category-notes .note-item-favorite {
@@ -576,6 +589,7 @@ main.main-content > .container {
     position: relative;
     margin: 0;
     padding: 0;
+    background-color: var(--color-bg-secondary);
     overflow: clip;
 }
 
@@ -656,6 +670,7 @@ main.main-content > .container {
     flex: 1;
     min-height: 0;
     overflow: hidden;
+    background-color: var(--color-bg-primary);
 }
 
 /* Metadata Section - top padding calculated to align with sidebar toggle at 5rem */
@@ -1978,4 +1993,72 @@ main.main-content > .container {
     .note-item {
         transition: none;
     }
+}
+
+/* ===================================
+   Open-in-Window Button (note cards & sidebar)
+   =================================== */
+
+.note-open-window-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    opacity: 0;
+    transition:
+        opacity 0.15s ease,
+        color 0.15s ease;
+    flex-shrink: 0;
+}
+
+.note-browser-card:hover .note-open-window-btn,
+.note-item:hover .note-item-open-window {
+    opacity: 1;
+}
+
+.note-open-window-btn:hover {
+    color: var(--color-primary);
+    opacity: 1;
+}
+
+/* ===================================
+   Standalone Note Window (note-window.html)
+   =================================== */
+
+.note-window-header {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    border-bottom: 1px solid var(--color-border-primary);
+    background-color: var(--color-surface);
+    flex-shrink: 0;
+}
+
+.note-window-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Make the standalone page fill the full viewport with the header + editor */
+.standalone-mode {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+.standalone-mode #note-editor {
+    flex: 1;
+    min-height: 0;
 }

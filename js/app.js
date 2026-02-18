@@ -298,7 +298,8 @@
             }
         });
 
-        // Category delete buttons are added dynamically in populateCategoriesManagementUI
+        // Category edit/delete buttons are added dynamically in populateCategoriesManagementUI
+        document.getElementById('categories-ul')?.addEventListener('click', handleCategoryEdit);
         document.getElementById('categories-ul')?.addEventListener('click', handleCategoryDelete);
 
         // Text import modal
@@ -346,8 +347,31 @@
             listCategorySelect.remove(1);
         }
 
-        // Add category options
-        state.categories.forEach(category => {
+        // Add category options: favorites first, archive last, alphabetical otherwise
+        const favCats =
+            typeof NotesApp !== 'undefined' && NotesApp.favoriteCategories
+                ? NotesApp.favoriteCategories
+                : [];
+        const sortedCategories = [...state.categories].sort((a, b) => {
+            const rootA = a.split('/')[0];
+            const rootB = b.split('/')[0];
+            const favA = favCats.includes(rootA);
+            const favB = favCats.includes(rootB);
+            if (favA && !favB) {
+                return -1;
+            }
+            if (!favA && favB) {
+                return 1;
+            }
+            if (rootA === 'archive' && rootB !== 'archive') {
+                return 1;
+            }
+            if (rootB === 'archive' && rootA !== 'archive') {
+                return -1;
+            }
+            return a.localeCompare(b);
+        });
+        sortedCategories.forEach(category => {
             const option = document.createElement('option');
             option.value = category;
             option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
@@ -387,12 +411,20 @@
             li.className = 'category-item';
             li.innerHTML = `
                 <span class="category-name">${category.charAt(0).toUpperCase() + category.slice(1)}</span>
-                <button class="icon-btn delete-category-btn" data-category="${category}" aria-label="Delete ${category}">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
+                <div class="category-actions">
+                    <button class="icon-btn edit-category-btn" data-category="${category}" aria-label="Edit ${category}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                    <button class="icon-btn delete-category-btn" data-category="${category}" aria-label="Delete ${category}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
             `;
             categoriesList.appendChild(li);
         });
@@ -450,6 +482,58 @@
                 btn.disabled = false;
                 btn.textContent = btn.dataset.originalText || 'Add Category';
             }
+        }
+    }
+
+    /**
+     * Handle editing/renaming a category
+     */
+    async function handleCategoryEdit(e) {
+        const editBtn = e.target.closest('.edit-category-btn');
+        if (!editBtn) {
+            return;
+        }
+
+        const oldName = editBtn.dataset.category;
+        if (!oldName) {
+            return;
+        }
+
+        const newName = prompt(`Rename category "${oldName}" to:`, oldName);
+        if (!newName || newName.trim() === oldName) {
+            return;
+        }
+
+        try {
+            editBtn.disabled = true;
+
+            const result = await Storage.renameCategory(oldName, newName.trim());
+
+            // Update state
+            state.categories = result.categories;
+
+            // Refresh UI
+            populateCategoryDropdowns();
+            populateCategoriesManagementUI();
+
+            // Refresh notes app categories and notes list (metadata updated server-side)
+            if (typeof NotesApp !== 'undefined') {
+                if (NotesApp.refreshCategories) {
+                    await NotesApp.refreshCategories();
+                }
+                if (NotesApp.loadNotes) {
+                    await NotesApp.loadNotes();
+                }
+                if (NotesApp.renderNotesList) {
+                    NotesApp.renderNotesList();
+                }
+            }
+
+            UI.showToast(`Category renamed to "${result.newName}"`, 'success');
+        } catch (error) {
+            UI.showToast(error.message || 'Failed to rename category', 'error');
+        } finally {
+            editBtn.disabled = false;
         }
     }
 

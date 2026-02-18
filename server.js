@@ -854,6 +854,127 @@ app.post('/api/data/categories', async (req, res) => {
     }
 });
 
+// Rename a category
+app.put('/api/data/categories/:name', async (req, res) => {
+    try {
+        const oldName = req.params.name.toLowerCase();
+        const { newName } = req.body;
+
+        // Validate new name
+        if (!newName || typeof newName !== 'string') {
+            return res.status(400).json({ error: 'New category name is required' });
+        }
+
+        const trimmedNewName = newName.trim().toLowerCase();
+
+        if (trimmedNewName.length === 0 || trimmedNewName.length > 50) {
+            return res.status(400).json({ error: 'Category name must be 1-50 characters' });
+        }
+
+        // Check old category exists
+        const oldIndex = VALID_CATEGORIES.indexOf(oldName);
+        if (oldIndex === -1) {
+            return res.status(404).json({ error: 'Category not found' });
+        }
+
+        // Check new name doesn't already exist (unless it's the same)
+        if (oldName !== trimmedNewName && VALID_CATEGORIES.includes(trimmedNewName)) {
+            return res.status(400).json({ error: 'A category with that name already exists' });
+        }
+
+        // Update category in array
+        VALID_CATEGORIES[oldIndex] = trimmedNewName;
+
+        // Update all lists referencing the old category
+        if (existsSync(LISTS_FILE)) {
+            const data = await readFile(LISTS_FILE, 'utf-8');
+            const lists = JSON.parse(data);
+            let listsChanged = false;
+            lists.forEach(list => {
+                if (list.category === oldName) {
+                    list.category = trimmedNewName;
+                    listsChanged = true;
+                }
+            });
+            if (listsChanged) {
+                await writeFile(LISTS_FILE, JSON.stringify(lists, null, 2));
+            }
+        }
+
+        // Update all notes referencing the old category
+        if (existsSync(NOTES_FILE)) {
+            const data = await readFile(NOTES_FILE, 'utf-8');
+            const notes = JSON.parse(data);
+            let notesChanged = false;
+            notes.forEach(note => {
+                if (note.category === oldName) {
+                    note.category = trimmedNewName;
+                    notesChanged = true;
+                }
+            });
+            if (notesChanged) {
+                await writeFile(NOTES_FILE, JSON.stringify(notes, null, 2));
+            }
+        }
+
+        // Also rename any subcategories (e.g., renaming "projects" should update "projects/sub")
+        const oldPrefix = oldName + '/';
+        const newPrefix = trimmedNewName + '/';
+        for (let i = 0; i < VALID_CATEGORIES.length; i++) {
+            if (VALID_CATEGORIES[i].startsWith(oldPrefix)) {
+                const oldSubName = VALID_CATEGORIES[i];
+                const newSubName = newPrefix + VALID_CATEGORIES[i].slice(oldPrefix.length);
+                VALID_CATEGORIES[i] = newSubName;
+
+                // Update lists with subcategory
+                if (existsSync(LISTS_FILE)) {
+                    const data = await readFile(LISTS_FILE, 'utf-8');
+                    const lists = JSON.parse(data);
+                    let changed = false;
+                    lists.forEach(list => {
+                        if (list.category === oldSubName) {
+                            list.category = newSubName;
+                            changed = true;
+                        }
+                    });
+                    if (changed) {
+                        await writeFile(LISTS_FILE, JSON.stringify(lists, null, 2));
+                    }
+                }
+
+                // Update notes with subcategory
+                if (existsSync(NOTES_FILE)) {
+                    const data = await readFile(NOTES_FILE, 'utf-8');
+                    const notes = JSON.parse(data);
+                    let changed = false;
+                    notes.forEach(note => {
+                        if (note.category === oldSubName) {
+                            note.category = newSubName;
+                            changed = true;
+                        }
+                    });
+                    if (changed) {
+                        await writeFile(NOTES_FILE, JSON.stringify(notes, null, 2));
+                    }
+                }
+            }
+        }
+
+        await writeFile(CATEGORIES_FILE, JSON.stringify(VALID_CATEGORIES, null, 2));
+
+        console.log(`✓ Renamed category: ${oldName} → ${trimmedNewName}`);
+        res.json({
+            success: true,
+            oldName: oldName,
+            newName: trimmedNewName,
+            categories: VALID_CATEGORIES
+        });
+    } catch (error) {
+        console.error('Error renaming category:', error);
+        res.status(500).json({ error: 'Failed to rename category' });
+    }
+});
+
 // Delete a category
 app.delete('/api/data/categories/:name', async (req, res) => {
     try {

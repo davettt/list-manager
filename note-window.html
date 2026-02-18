@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Note</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="stylesheet" href="styles/themes.css" />
+        <link rel="stylesheet" href="styles/main.css" />
+        <link rel="stylesheet" href="styles/components.css" />
+        <link rel="stylesheet" href="styles/notes.css" />
+    </head>
+    <body class="standalone-mode" data-theme="light">
+        <!-- Slim header bar showing note title -->
+        <div id="note-window-header" class="note-window-header">
+            <span id="note-window-title" class="note-window-title">Loading...</span>
+        </div>
+
+        <!-- Required by NotesEditor internals — kept hidden -->
+        <div id="no-note-selected" style="display: none"></div>
+
+        <!-- Note Editor -->
+        <div id="note-editor" class="note-editor" style="display: none">
+            <!-- Note Metadata -->
+            <div class="note-metadata">
+                <input
+                    type="text"
+                    id="note-title-input"
+                    class="note-title-input"
+                    placeholder="Note title..."
+                    maxlength="75"
+                    aria-label="Note title"
+                />
+                <div class="note-metadata-row">
+                    <select id="note-category-select" aria-label="Note category"></select>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="note-favorite-checkbox" />
+                        <span>Favorite</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Note Controls -->
+            <div class="note-controls">
+                <button
+                    id="note-restore-backup-btn"
+                    class="btn btn-secondary btn-sm"
+                    title="Restore from backup (created when grammar updates are applied)"
+                    style="display: none"
+                >
+                    <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                        <path d="M21 3v5h-5"></path>
+                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                        <path d="M3 21v-5h5"></path>
+                    </svg>
+                    Restore Backup
+                </button>
+                <button
+                    id="note-export-pdf-btn"
+                    class="btn btn-secondary btn-sm"
+                    title="Export note as PDF"
+                >
+                    <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="12" y1="19" x2="12" y2="13"></line>
+                        <polyline points="9 16 12 13 15 16"></polyline>
+                    </svg>
+                    Export PDF
+                </button>
+
+                <!-- Pane Toggle Buttons -->
+                <div class="pane-toggle-group">
+                    <button
+                        id="note-toggle-editor-only"
+                        class="btn btn-secondary btn-sm"
+                        title="Show editor only"
+                    >
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                            ></path>
+                            <path
+                                d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+                            ></path>
+                        </svg>
+                    </button>
+                    <button
+                        id="note-toggle-both"
+                        class="btn btn-secondary btn-sm active"
+                        title="Show both editor and preview"
+                    >
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <rect x="3" y="3" width="7" height="18"></rect>
+                            <rect x="14" y="3" width="7" height="18"></rect>
+                        </svg>
+                    </button>
+                    <button
+                        id="note-toggle-preview-only"
+                        class="btn btn-secondary btn-sm"
+                        title="Show preview only"
+                    >
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Editor Panes -->
+            <div class="editor-panes">
+                <div class="editor-pane edit-pane">
+                    <textarea
+                        id="note-content-textarea"
+                        class="note-textarea"
+                        placeholder="Write your note in markdown..."
+                        aria-label="Note content"
+                    ></textarea>
+                </div>
+                <div class="editor-pane preview-pane">
+                    <div id="note-preview" class="note-preview markdown-body"></div>
+                </div>
+            </div>
+
+            <!-- Note Status -->
+            <div class="note-status">
+                <span id="note-status-text">Loading...</span>
+                <div class="character-counter-container">
+                    <div class="character-counter-bar">
+                        <div id="character-counter-fill" class="character-counter-fill"></div>
+                    </div>
+                    <span id="character-counter-text" class="character-counter-text">0 / 3000</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Markdown library -->
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <!-- DOMPurify for XSS protection -->
+        <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+
+        <script src="js/utils.js"></script>
+        <script src="js/storage.js"></script>
+        <script src="js/notes-storage.js"></script>
+        <script src="js/notes-editor.js"></script>
+
+        <script>
+            async function initNoteWindow() {
+                const params = new URLSearchParams(window.location.search);
+                const noteId = params.get('noteId');
+
+                // Apply saved theme
+                try {
+                    const savedTheme = localStorage.getItem('theme') || 'light';
+                    document.body.setAttribute('data-theme', savedTheme);
+                } catch (e) {}
+
+                if (!noteId) {
+                    document.getElementById('note-editor').style.display = 'flex';
+                    document.getElementById('note-status-text').textContent = 'No note specified';
+                    document.getElementById('note-window-title').textContent = 'No note specified';
+                    document.title = 'Note Window';
+                    return;
+                }
+
+                // Populate category dropdown
+                try {
+                    const resp = await fetch('/api/data/categories');
+                    if (resp.ok) {
+                        const categories = await resp.json();
+                        const select = document.getElementById('note-category-select');
+                        categories.forEach(cat => {
+                            const opt = document.createElement('option');
+                            opt.value = cat;
+                            opt.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+                            select.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error loading categories:', e);
+                }
+
+                // Initialize editor (sets up textarea, title, category, pane toggles, restore)
+                NotesEditor.initialize();
+
+                // Wire up PDF export — direct link without modal
+                const pdfBtn = document.getElementById('note-export-pdf-btn');
+                if (pdfBtn) {
+                    pdfBtn.addEventListener('click', () => {
+                        window.open(`/api/export/note/${encodeURIComponent(noteId)}/pdf`, '_blank');
+                    });
+                }
+
+                // Load note
+                await NotesEditor.loadNote(noteId);
+
+                // Sync window title with note title
+                const titleInput = document.getElementById('note-title-input');
+                const headerTitle = document.getElementById('note-window-title');
+
+                function syncTitle() {
+                    const t = titleInput.value || 'Untitled Note';
+                    document.title = t;
+                    if (headerTitle) headerTitle.textContent = t;
+                }
+
+                syncTitle();
+                titleInput.addEventListener('input', syncTitle);
+            }
+
+            document.addEventListener('DOMContentLoaded', initNoteWindow);
+        </script>
+    </body>
+</html>

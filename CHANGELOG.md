@@ -14,6 +14,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.14.0] - 2026-02-18
+
+### Added
+- 🪟 **Open Note in New Window** - Open any note in a separate browser popup window for side-by-side reference while writing another note
+  - "New Window" button in the note editor toolbar
+  - External-link icon button on each note card in the browser panel and sidebar items (visible on hover)
+  - Re-clicking the same note's button focuses the existing popup rather than opening a duplicate
+  - Full editor functionality in popup: pane toggles, autosave, PDF export, category and favorite controls
+- ↕️ **Collapse All Sidebar Categories** - New collapse-all button in the sidebar header to quickly collapse all categories at once
+
+### Changed
+- 🔀 **Note Sort Toggle** - Sort control (A-Z / Date) moved from the sidebar into the notes browser header for better discoverability; preference persisted across sessions
+- 🎨 **Sidebar Visual Redesign** - Sidebar now uses a box-shadow instead of a flat border, giving it a floating panel appearance; workspace area uses a subtle tinted background to distinguish it from the white sidebar and editor panels
+- 🗂️ **Category Favoriting** - Mark categories as favorites to pin them at the top of the sidebar
+- ✏️ **Category Renaming** - Rename existing categories directly from the sidebar
+- 🧹 **Sidebar Simplification** - Removed rarely-used sort controls from sidebar; removed dead "Custom" category sort code
+
+---
+
 ## [1.13.0] - 2026-02-14
 
 ### Added
